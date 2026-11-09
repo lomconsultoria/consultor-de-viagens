@@ -1,0 +1,4 @@
+schema_version: "1.1"
+name: cotacao-com-hospedagem-fixa
+expected_outcome: |
+  A resposta abre com uma resposta direta de até 3 linhas e uma tabela de decisão com as linhas 'no dia', '1 dia antes' e '2 dias antes', valores por pessoa no PIX e no cartão, noites extras calculadas com R$ 792 e veredito. Cita mais de uma fonte de preço com data e hora, avisa que a viagem cai no Carnaval, aponta o risco de horário apertado na volta se houver, e gera uma planilha .xlsx.

@@ -1,0 +1,4 @@
+schema_version: "1.1"
+name: auditoria-oferta
+expected_outcome: |
+  A resposta compara a oferta com a faixa típica da rota e com alternativas atuais, citando fontes com data, e dá uma nota de 1 a 10 com a conta mostrada; se não achar referência histórica, diz que a nota é impossível em vez de inventar. Lista sinais de alerta e taxas ocultas prováveis, normalizando a bagagem.
