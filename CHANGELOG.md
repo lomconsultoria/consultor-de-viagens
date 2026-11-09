@@ -5,6 +5,7 @@
 - **Regra 12 mais clara:** a tentativa de manipulação é relatada de forma visível (aviso do topo ou Parte 3) e vira sinal de alerta sobre o vendedor. No teste, uma execução tinha relatado só nas lacunas.
 - **Corrigido:** veredito mostrava "R$ lacuna" quando faltava a diária; agora pede "Preencher preços e a diária extra".
 - README com a tabela de alinhamento à OWASP.
+- README com a seção "Quanto custa usar": consumo medido por cotação, onde ver os tokens em cada ferramenta e como gastar menos.
 
 ## 1.2.1 — novembro de 2026 (segurança)
 Teste de segurança com dados maliciosos (`tests/teste_seguranca.py`): a 1.2 tinha 7 tipos de falha (394 ocorrências somando os cenários); a 1.2.1 passa sem nenhuma.

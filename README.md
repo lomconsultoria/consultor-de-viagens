@@ -64,6 +64,48 @@ tests/                            # fica fora do pacote da skill
 
 Depois de instalar, peça algo como: *"Quero cotar passagens de São Paulo para Recife em março, 2 adultos"*.
 
+## Quanto custa usar
+
+O consumo é medido em **tokens**, a unidade que as ferramentas de IA usam para contar o texto lido e escrito. Ele entra no limite do seu plano ou na sua fatura de API, conforme a ferramenta.
+
+### Consumo medido
+
+Cada cotação completa nos testes de comportamento de 09/11/2026 (ver [tests/comportamento/](tests/comportamento/README.md)) rodou num assistente separado, e a ferramenta registrou os tokens de cada uma:
+
+| Versão | Cotações | Menor | Maior | Média |
+|---|---|---|---|---|
+| 1.2.1 | 4 | 116.625 | 131.462 | **122.666 tokens** |
+| 1.0 | 4 | 120.723 | 131.760 | 126.834 tokens |
+
+- Cada cotação levou de 7 a 11 ações (ler a skill, ler as páginas, gerar e conferir a planilha) e de 2 a 3,5 minutos.
+- O total inclui o contexto do próprio assistente, a leitura da skill e das páginas e a geração da planilha.
+- **Limite da medição:** os testes rodaram sem navegador e com páginas curtas. Uma cotação real, com navegador e várias fontes, tende a consumir mais; esse caso ainda não foi medido.
+
+### Por que o consumo é controlado
+
+A skill segue a "revelação progressiva" do padrão Agent Skills: só a descrição fica sempre carregada; o `SKILL.md` (cerca de 11,6 mil caracteres) entra quando a skill é acionada; e cada arquivo de `references/` (de 2,3 mil a 9 mil caracteres) só é lido quando a etapa pede. Uma auditoria de oferta, por exemplo, não lê o roteiro de hospedagem.
+
+### Onde ver o consumo na sua ferramenta
+
+A skill não informa os tokens na resposta: o assistente não enxerga esse número enquanto responde, e uma estimativa iria contra a regra de não inventar números. Veja na ferramenta:
+
+| Ferramenta | Onde ver | Por resposta? |
+|---|---|---|
+| App do Claude (web, desktop, celular) | Configurações > Uso: quanto da sessão e da semana já foi usado | Não |
+| Claude Code | `/usage`: tokens da sessão por modelo e custo estimado (para quem usa API) | Não, total da sessão |
+| Claude Code | Contador ao lado do indicador de progresso (ex.: `↓ 5.5k tokens`) | Sim, só o que foi gerado na resposta |
+| Claude Code | [Barra de status](https://code.claude.com/docs/en/statusline) configurável com uso de contexto e custo | Total acumulado |
+| API da Anthropic | Campo `usage` de cada resposta, com tokens de entrada e de saída | **Sim, exato** |
+
+Outras ferramentas (Codex, Gemini CLI, Cursor etc.) têm painéis próprios; consulte a documentação de cada uma.
+
+### Como gastar menos
+
+- **Uma viagem por conversa:** a conversa inteira é reenviada a cada passo, então cotações seguidas na mesma conversa ficam mais caras. Para uma nova viagem, abra uma conversa nova.
+- **Pedido completo na primeira mensagem** (origem, destino, datas, pessoas, bagagem, o que já está reservado): evita rodadas de pergunta e resposta.
+- **Peça só o formato de planilha que vai usar:** `--formato todos` gera Excel e CSV.
+- **Simule na planilha, não no chat:** outra diária, outro número de pessoas ou outras parcelas se recalculam na planilha sem nova cotação.
+
 ## Segurança
 
 ### "Essa skill executa código na máquina": o que isso significa
