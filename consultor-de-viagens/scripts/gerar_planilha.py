@@ -46,7 +46,8 @@ _thin = Side(style="thin", color="BFBFBF")
 BORDA = Border(left=_thin, right=_thin, top=_thin, bottom=_thin)
 CREDITO = "Gerado com a skill Consultor de Viagens — LOM Consultoria e Projetos — contato@lomconsultoria.com"
 # Caracteres que fazem Excel, LibreOffice ou Google Sheets tratar o texto como fórmula
-PERIGOSOS = ("=", "+", "-", "@", "\t", "\r", "\n", "\uff1d")
+# (OWASP WSTG-INPV-21: =, +, -, @, tabulação, CR, LF e as variantes de largura total)
+PERIGOSOS = ("=", "+", "-", "@", "\t", "\r", "\n", "\uff1d", "\uff0b", "\uff0d", "\uff20")
 # Caracteres de controle que corrompem o .xlsx (o openpyxl recusa) ou escondem conteúdo
 _CONTROLE = re.compile(r"[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]")
 LIMITE_TEXTO = 32000  # o Excel aceita até 32.767 caracteres por célula

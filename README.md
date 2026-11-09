@@ -90,7 +90,7 @@ Esse aviso aparece em qualquer skill que traga um programa junto. Aqui, o progra
 
 ### Teste de segurança
 
-`tests/teste_seguranca.py` simula dados de sites maliciosos: 12 tipos de injeção de fórmula (incluindo `HYPERLINK`, `IMPORTXML` e `WEBSERVICE`, usados para vazar dados), 7 tipos de link perigoso, números inválidos (NaN, infinito), caracteres de controle, texto de 40 mil caracteres, tipos errados e caminho de saída fora da pasta.
+`tests/teste_seguranca.py` segue os critérios do guia de testes da OWASP para injeção em CSV ([WSTG-INPV-21](https://owasp.org/www-project-web-security-testing-guide/latest/4-Web_Application_Security_Testing/07-Input_Validation_Testing/21-Testing_for_CSV_Injection)) e simula dados de sites maliciosos: 20 tipos de injeção de fórmula, incluindo variantes de largura total e tentativas de sair da célula com separador e aspas (entre elas `HYPERLINK`, `IMPORTXML` e `WEBSERVICE`, usadas para vazar dados), 7 tipos de link perigoso, números inválidos (NaN, infinito), caracteres de controle, texto de 40 mil caracteres, tipos errados e caminho de saída fora da pasta.
 
 ```
 python tests/teste_seguranca.py
@@ -100,6 +100,7 @@ Resultado em 09/11/2026: a versão 1.2 tinha 7 tipos de falha, com 394 ocorrênc
 
 ### Riscos que continuam
 
+- **CSV salvo de novo no Excel:** o apóstrofo que protege o CSV pode sumir se alguém abrir, salvar e reabrir o arquivo no Excel (limite apontado pela própria OWASP). No Excel (.xlsx) e no Google Sheets isso não acontece, porque o texto já é gravado como texto.
 - **Link para site legítimo, mas errado:** a skill só usa links dos vendedores consultados, mas não há como garantir que um site não tenha sido adulterado. Confira o domínio mostrado na planilha antes de clicar e de pagar.
 - **Injeção de instruções (prompt injection):** a regra de ignorar instruções vindas de sites reduz o risco, mas nenhum assistente de IA é imune. Confira a recomendação antes de comprar; a compra é sempre sua.
 - **Cópias alteradas:** instale só a partir deste repositório (`lmello83/consultor-de-viagens`). Uma cópia modificada pode trazer outro programa com o mesmo aviso.

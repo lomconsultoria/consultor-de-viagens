@@ -9,6 +9,7 @@ Teste de segurança com dados maliciosos (`tests/teste_seguranca.py`): a 1.2 tin
 - **Novo:** links mostram o domínio de destino; `javascript:`, `file:`, `data:` e caminhos de rede são descartados.
 - **Novo:** validação de passageiros (1 a 99), caminho de saída sem `..`, sem seguir atalho (symlink) pendente, extensão `.xlsx` garantida.
 - **Novo:** a skill não baixa nem abre arquivos de sites; o nome do arquivo usa só códigos, datas e caracteres seguros.
+- Alinhado ao guia de testes da OWASP (WSTG-INPV-21): proteção também para `＋`, `－` e `＠` de largura total e teste de fuga da célula com separador e aspas.
 - README com a seção Segurança (o que o aviso "executa código" significa, proteções, riscos que continuam) e `SECURITY.md` para reportar vulnerabilidades.
 
 ## 1.2 — novembro de 2026
