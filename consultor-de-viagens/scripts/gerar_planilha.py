@@ -5,7 +5,7 @@ Gera a planilha Excel da cotação de viagem (skill consultor-de-viagens).
 Uso:
     python gerar_planilha.py dados.json saida.xlsx [--fonte "Gothic A1"]
 
-- Entrada: JSON no formato descrito em references/planilha-excel.md.
+- Entrada: JSON no formato descrito em references/planilha-e-exportacao.md.
 - Saída: .xlsx com 5 abas (Resumo, Comparação de datas, Fontes, Pagamento,
   Premissas e lacunas). Totais, hospedagem extra, diferenças e parcelas são
   FÓRMULAS que referenciam as premissas editáveis.
@@ -210,9 +210,11 @@ def gerar(d, saida):
             texto(cd.cell(row=r, column=20), o.get("veredito", "Recomendada"), bold=True)
         else:
             extra = f'&IF(L{r}>0," (só vale se a noite custar até R$ "&TEXT(S{r},"0")&" por pessoa)","")'
+            sem_preco = (f'IF(L{r}>0,"Preencher preços: só compensa se a passagem sair mais de R$ "&TEXT(M{r},"0")'
+                         f'&" por pessoa mais barata que a recomendada","Preencher preços")')
             formula(cd.cell(row=r, column=20),
-                    f'=IFERROR(IF(R{r}<0,"Vale a pena: economiza R$ "&TEXT(-R{r},"0"),'
-                    f'"Não vale: R$ "&TEXT(R{r},"0")&" a mais por pessoa"{extra}),"lacuna")', fmt="General")
+                    f'=IF(ISNUMBER(R{r}),IF(R{r}<0,"Vale a pena: economiza R$ "&TEXT(-R{r},"0"),'
+                    f'"Não vale: R$ "&TEXT(R{r},"0")&" a mais por pessoa"{extra}),{sem_preco})', fmt="General")
             cd.cell(row=r, column=20).alignment = Alignment(wrap_text=True, vertical="top")
         if o.get("recomendada"):
             for j in range(1, 21):
@@ -285,10 +287,10 @@ def gerar(d, saida):
         texto(pg.cell(row=i, column=1), s.get("trecho"))
         texto(pg.cell(row=i, column=2), s.get("forma"))
         col = colref.get(s.get("base", ""), "I")
-        formula(pg.cell(row=i, column=3), f"={C}!{col}{r0}*{pax}")
+        formula(pg.cell(row=i, column=3), f'=IFERROR({C}!{col}{r0}*{pax},"lacuna")')
         c = numero(pg.cell(row=i, column=4), s.get("parcelas", 1), fmt="0")
         c.fill = INP
-        formula(pg.cell(row=i, column=5), f"=C{i}/D{i}")
+        formula(pg.cell(row=i, column=5), f'=IFERROR(C{i}/D{i},"lacuna")')
         texto(pg.cell(row=i, column=6), s.get("obs", ""))
     larguras(pg, [26, 30, 34, 14, 26, 50, 8])
 
@@ -336,21 +338,155 @@ def gerar(d, saida):
     return saida, totais_py
 
 
+# ---------------------------------------------------------------------------
+# Exportação em CSV (valores calculados; CSV não guarda fórmulas)
+# ---------------------------------------------------------------------------
+
+def _num(v):
+    return isinstance(v, (int, float)) and not isinstance(v, bool)
+
+
+def calcular(d):
+    """Mesmos cálculos das fórmulas do Excel, em Python."""
+    prem = {p["chave"]: p.get("valor") for p in d["premissas"]}
+    pax, diaria = prem["passageiros"], prem["diaria_extra_grupo"]
+    opcoes = sorted(d["opcoes"], key=lambda o: not o.get("recomendada", False))
+    linhas = []
+    for o in opcoes:
+        n = o.get("noites_extras", 0) or 0
+        hosp = n * diaria / pax if _num(diaria) and _num(pax) and pax else None
+        ida_p, ida_c, volta = o.get("ida_pix_pp"), o.get("ida_cartao_pp"), o.get("volta_pp")
+        t_pix = ida_p + volta + hosp if all(_num(x) for x in (ida_p, volta, hosp)) else None
+        t_car = ida_c + volta + hosp if all(_num(x) for x in (ida_c, volta, hosp)) else None
+        linhas.append(dict(o, hosp_pp=hosp, total_pix_pp=t_pix, total_cartao_pp=t_car,
+                           grupo_pix=t_pix * pax if _num(t_pix) else None,
+                           grupo_cartao=t_car * pax if _num(t_car) else None))
+    base = linhas[0]["total_pix_pp"]
+    for li in linhas:
+        n = li.get("noites_extras", 0) or 0
+        li["diferenca"] = li["total_pix_pp"] - base if _num(li["total_pix_pp"]) and _num(base) else None
+        if not n:
+            li["equilibrio"] = "—"
+        elif _num(base) and _num(li.get("ida_pix_pp")) and _num(li.get("volta_pp")):
+            li["equilibrio"] = (base - li["ida_pix_pp"] - li["volta_pp"]) / n
+        else:
+            li["equilibrio"] = None
+        if li.get("recomendada"):
+            li["veredito_calc"] = li.get("veredito", "Recomendada")
+        elif li["diferenca"] is None:
+            n = li.get("noites_extras", 0) or 0
+            li["veredito_calc"] = (f"Preencher preços: só compensa se a passagem sair mais de R$ {li['hosp_pp']:.0f} "
+                                   "por pessoa mais barata que a recomendada") if n and _num(li["hosp_pp"]) else "Preencher preços"
+        elif li["diferenca"] < 0:
+            li["veredito_calc"] = f"Vale a pena: economiza R$ {-li['diferenca']:.0f}"
+        else:
+            li["veredito_calc"] = f"Não vale: R$ {li['diferenca']:.0f} a mais por pessoa" + (
+                f" (só vale se a noite custar até R$ {li['equilibrio']:.0f} por pessoa)" if _num(li["equilibrio"]) else "")
+    return linhas, pax
+
+
+def _cel_csv(v, decimal):
+    if v is None or v == "":
+        return "lacuna" if v is None else ""
+    if _num(v):
+        s = f"{v:.2f}" if isinstance(v, float) else str(v)
+        return s.replace(".", decimal) if decimal != "." else s
+    s = str(v)
+    # Proteção contra injeção de fórmula ao abrir o CSV no Excel/Sheets
+    return "'" + s if s.startswith(PERIGOSOS) else s
+
+
+def _link_csv(url):
+    return url if isinstance(url, str) and url.lower().startswith(("http://", "https://")) else "—"
+
+
+def gerar_csv(d, pasta, sep=";", decimal=","):
+    import csv
+    validar(d)
+    pasta = caminho_livre(pasta)
+    os.makedirs(pasta, exist_ok=True)
+    linhas, pax = calcular(d)
+
+    def grava(nome, cab, rows):
+        with open(os.path.join(pasta, nome), "w", encoding="utf-8-sig", newline="") as fh:
+            w = csv.writer(fh, delimiter=sep)
+            w.writerow(cab)
+            for r in rows:
+                w.writerow([_cel_csv(v, decimal) for v in r])
+
+    rec = linhas[0]
+    resumo = [["Título", d["titulo"]], ["Consulta", d["consulta"]]]
+    resumo += [["Recomendação", t] for t in d["recomendacao"]]
+    resumo += [["Total por pessoa (PIX)", rec["total_pix_pp"]], ["Total por pessoa (cartão)", rec["total_cartao_pp"]],
+               ["Total do grupo (PIX)", rec["grupo_pix"]], ["Total do grupo (cartão)", rec["grupo_cartao"]]]
+    resumo += [[f"{li.get('opcao')}: diferença por pessoa", li["diferenca"]] for li in linhas[1:]]
+    resumo += [["Risco", t] for t in d.get("riscos", [])]
+    resumo += [["Crédito", CREDITO]]
+    grava("1-resumo.csv", ["Item", "Valor"], resumo)
+
+    grava("2-comparacao-de-datas.csv",
+          ["Opção", "Data da ida", "Partida", "Chegada", "Trecho", "Companhia", "Escalas", "Volta",
+           "Ida por pessoa (PIX)", "Ida por pessoa (cartão)", "Volta por pessoa", "Noites extras",
+           "Hospedagem extra por pessoa", "TOTAL por pessoa (PIX)", "TOTAL por pessoa (cartão)",
+           "Total do grupo (PIX)", "Total do grupo (cartão)", "Diferença vs. recomendada (PIX)",
+           "Diária máx. por pessoa para empatar", "Veredito"],
+          [[li.get(k) for k in ("opcao", "ida_data", "partida", "chegada", "trecho", "companhia", "escalas", "volta",
+                                "ida_pix_pp", "ida_cartao_pp", "volta_pp", "noites_extras", "hosp_pp", "total_pix_pp",
+                                "total_cartao_pp", "grupo_pix", "grupo_cartao", "diferenca", "equilibrio", "veredito_calc")]
+           for li in linhas])
+
+    grava("3-fontes.csv", ["Trecho", "Voo", "Fonte", "Por pessoa (PIX / à vista)", "Por pessoa (cartão)",
+                           "Parcelamento", "Tarifa e bagagem", "Reputação / observação", "Link", "Hora da consulta"],
+          [[f.get(k) if k != "link" else _link_csv(f.get(k)) for k in ("trecho", "voo", "fonte", "pix_pp", "cartao_pp",
+                                                                       "parcelamento", "tarifa", "reputacao", "link", "hora")]
+           for f in d.get("fontes", [])])
+
+    colmap = {"ida_pix": "ida_pix_pp", "ida_cartao": "ida_cartao_pp", "volta": "volta_pp"}
+    pag = [[p.get(k) if k != "link" else _link_csv(p.get(k))
+            for k in ("canal", "desconto_pix", "parcelas_sem_juros", "parcela_minima", "juros", "observacoes", "link")]
+           for p in d.get("pagamento", [])]
+    for s in d.get("simulacao", []):
+        v = rec.get(colmap.get(s.get("base", ""), "ida_pix_pp"))
+        tot = v * pax if _num(v) else None
+        parc = s.get("parcelas", 1) or 1
+        pag.append([f"Simulação: {s.get('trecho')}", s.get("forma"), f"{parc}x", None, None,
+                    f"Total do grupo {_cel_csv(tot, decimal)}; parcela {_cel_csv(tot / parc if _num(tot) else None, decimal)}. {s.get('obs', '')}", None])
+    grava("4-pagamento.csv", ["Canal", "Desconto no PIX", "Parcelas sem juros", "Parcela mínima", "Juros",
+                              "Observações", "Fonte"], pag)
+
+    prem = [["Premissa", p.get("rotulo", p["chave"]), p.get("valor"), p.get("fonte", "")] for p in d["premissas"]]
+    prem += [["Lacuna", l.get("item"), l.get("situacao"), l.get("como_conferir")] for l in d.get("lacunas", [])]
+    grava("5-premissas-e-lacunas.csv", ["Tipo", "Item", "Valor / situação", "Fonte / como conferir"], prem)
+    return pasta, [(li.get("opcao"), li["total_pix_pp"], li["total_cartao_pp"]) for li in linhas]
+
+
 def main():
     global FONTE
-    ap = argparse.ArgumentParser(description="Gera a planilha da cotação de viagem.")
+    ap = argparse.ArgumentParser(description="Gera a planilha da cotação de viagem (Excel e/ou CSV).")
     ap.add_argument("dados", help="arquivo JSON de entrada")
-    ap.add_argument("saida", help="caminho do .xlsx de saída")
-    ap.add_argument("--fonte", default=FONTE, help="fonte das células (padrão: Gothic A1)")
+    ap.add_argument("saida", help="caminho do .xlsx (com --formato csv, vira o nome da pasta dos CSVs)")
+    ap.add_argument("--formato", choices=["xlsx", "csv", "todos"], default="xlsx",
+                    help="xlsx (padrão; também serve para Google Sheets), csv ou todos")
+    ap.add_argument("--fonte", default=FONTE, help="fonte das células do Excel (padrão: Gothic A1)")
+    ap.add_argument("--separador", default=";", help="separador do CSV (padrão ';', o que o Excel em português espera)")
+    ap.add_argument("--decimal", default=",", help="separador decimal do CSV (padrão ',')")
     a = ap.parse_args()
     FONTE = a.fonte
     with open(a.dados, encoding="utf-8") as fh:
         d = json.load(fh)
-    saida, totais = gerar(d, a.saida)
-    print(f"Planilha salva em: {saida}")
+    totais = None
+    if a.formato in ("xlsx", "todos"):
+        saida, totais = gerar(d, a.saida)
+        print(f"Excel salvo em: {saida}")
+    if a.formato in ("csv", "todos"):
+        pasta = os.path.splitext(a.saida)[0] + "_csv"
+        pasta, totais_csv = gerar_csv(d, pasta, a.separador, a.decimal)
+        print(f"CSVs salvos em: {pasta}")
+        totais = totais or totais_csv
     print("Conferência (por pessoa: PIX | cartão):")
     for nome, pix, cartao in totais:
-        print(f"  - {nome}: {pix} | {cartao}")
+        f = lambda v: f"{v:.2f}" if _num(v) else "lacuna"
+        print(f"  - {nome}: {f(pix)} | {f(cartao)}")
 
 
 if __name__ == "__main__":

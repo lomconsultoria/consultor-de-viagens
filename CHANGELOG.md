@@ -1,5 +1,11 @@
 # Histórico de versões
 
+## 1.2 — novembro de 2026
+- **Três formatos de planilha:** Excel (padrão, com fórmulas), Google Sheets (envio ao Drive convertendo o .xlsx, fórmulas preservadas) e CSV (um arquivo por aba, valores calculados, `;` e vírgula decimal para o Excel em português).
+- A pergunta de abertura passa a perguntar o formato da planilha.
+- CSV protegido contra injeção de fórmula (apóstrofo antes de `=`, `+`, `-`, `@`) e com links só `http(s)`.
+- Critérios de avaliação nos 4 casos de teste de `evals/`.
+
 ## 1.1 — novembro de 2026
 - **Portável entre ferramentas:** segue o padrão aberto Agent Skills e passa no validador oficial (`skills-ref`). Novo campo `compatibility` no cabeçalho com o que a skill precisa.
 - **Mais leve:** o `SKILL.md` caiu de 420 para 120 linhas (de cerca de 39 mil para 10,5 mil caracteres). Os detalhes foram para `references/` e são lidos só quando a etapa pede.

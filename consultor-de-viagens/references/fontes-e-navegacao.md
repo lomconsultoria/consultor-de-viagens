@@ -96,11 +96,12 @@ As URLs abaixo funcionavam em novembro de 2026. Se uma não carregar o resultado
 
 ## 6. Sem navegador: plano B
 
-Algumas ferramentas só têm busca na web. Nesse caso:
-- Use a busca para preços publicados, promoções, regras de bagagem e pagamento, e reputação de agências.
-- Avise **no topo da resposta** que a comparação de vendedores ficou limitada, porque a lista de agências e as famílias tarifárias só aparecem navegando.
-- Monte os links prontos (seção 5) para a pessoa conferir os preços finais, um por fonte.
-- Não preencha a tabela com preços que você não viu: use "lacuna".
+Algumas ferramentas só têm busca na web, e os testes mostraram que, sem navegador, as páginas de busca por data (Kayak, Skyscanner, Azul, agências) costumam ser recusadas. Na prática, quase sempre faltará o preço exato das datas. Nesse caso:
+- **Avise no topo da resposta** que não foi possível cotar as datas exatas e por quê.
+- **Use o que a busca alcança:** páginas de rota sem data (faixa típica e mês mais caro no Kayak, Momondo, Skyscanner), promoções publicadas, regras de bagagem e pagamento, reputação de agências.
+- **Entregue a regra de decisão em reais**, que vale mesmo sem preço: "ir 1 dia antes só compensa se a passagem sair mais de R$ X por pessoa mais barata que no dia" (X = hospedagem extra por pessoa). Diga também até quanto o preço está dentro da faixa típica.
+- **Monte os links prontos** (seção 5) para a pessoa conferir cada data e fonte, já com o número de passageiros.
+- Na tabela e na planilha, preço que você não viu é "lacuna". A planilha calcula sozinha quando a pessoa digitar os preços.
 
 ## 7. Bloqueios e limites
 

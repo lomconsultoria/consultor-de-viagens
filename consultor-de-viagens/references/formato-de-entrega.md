@@ -38,6 +38,12 @@ Uma linha abaixo: de onde vem a diária usada nas noites extras.
 - Fontes: links com data e hora.
 - Uma linha dizendo onde a planilha ficou.
 
+## Quando faltam os preços das datas
+Acontece sobretudo sem navegador. Mantenha as 3 partes:
+- **Parte 1:** diga que não foi possível cotar as datas exatas, dê a recomendação que não depende do preço (ex.: comprar já, em dois bilhetes só de ida, direto na companhia) e a regra de decisão em reais.
+- **Parte 2:** na tabela, preço por pessoa como "lacuna" e, no veredito, o limite: "só compensa se a passagem sair mais de R$ X por pessoa mais barata".
+- **Parte 3:** os links prontos para conferir, um por data e fonte, e a faixa típica de preço com fonte.
+
 ## Exemplo (abreviado, cotação real de 09/11/2026)
 
 **Parte 1**

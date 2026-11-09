@@ -1,8 +1,8 @@
 # Consultor de Viagens Econômicas
 
-Skill no padrão aberto **[Agent Skills](https://agentskills.io)** que transforma o assistente de IA num consultor de viagens econômicas: compara datas, fontes de preço e formas de pagamento, avalia ofertas e entrega uma recomendação clara, com uma planilha Excel para simular.
+Skill no padrão aberto **[Agent Skills](https://agentskills.io)** que transforma o assistente de IA num consultor de viagens econômicas: compara datas, fontes de preço e formas de pagamento, avalia ofertas e entrega uma recomendação clara, com uma planilha para simular, em Excel, Google Sheets ou CSV.
 
-> Criado por **LOM Consultoria e Projetos** · [contato@lomconsultoria.com](mailto:contato@lomconsultoria.com) · Versão 1.1
+> Criado por **LOM Consultoria e Projetos** · [contato@lomconsultoria.com](mailto:contato@lomconsultoria.com) · Versão 1.2
 
 ## O que a skill faz
 
@@ -11,7 +11,7 @@ Skill no padrão aberto **[Agent Skills](https://agentskills.io)** que transform
 - **Cruza várias fontes de preço:** metabuscadores, site da companhia aérea, agências online e programas de milhas, com checagem de reputação das agências.
 - **Mostra o preço no PIX e no cartão**, com parcelas e juros de cada vendedor.
 - **Nove módulos:** matriz de datas, aeroportos alternativos, conexões e viagens com várias cidades, auditoria de oferta (nota de 1 a 10), custos ocultos, escolha de bairro, custo-benefício de hospedagem, otimização do custo total e decisão de compra (reserve agora, espere ou mude de plano).
-- **Gera uma planilha Excel** com fórmulas: resumo, comparação de datas, fontes, pagamento e premissas editáveis.
+- **Entrega a planilha no formato que a pessoa escolher:** Excel (com fórmulas), Google Sheets (as fórmulas continuam funcionando) ou CSV (valores calculados, um arquivo por aba). Abas: resumo, comparação de datas, fontes, pagamento e premissas editáveis.
 
 ## Regras que a skill segue
 
@@ -32,9 +32,9 @@ consultor-de-viagens/
 │   ├── modulos-voo.md            # módulos 1, 2, 3, 4 e 9
 │   ├── modulos-custos-e-hospedagem.md  # módulos 5, 6, 7 e 8
 │   ├── formato-de-entrega.md     # modelo da resposta com exemplo real
-│   └── planilha-excel.md         # formato do JSON e regras da planilha
+│   └── planilha-e-exportacao.md  # Excel, Google Sheets ou CSV: formato do JSON e regras
 ├── scripts/
-│   └── gerar_planilha.py         # gera o .xlsx com fórmulas a partir de um JSON
+│   └── gerar_planilha.py         # gera o .xlsx (com fórmulas) e/ou os .csv a partir de um JSON
 └── evals/                        # 4 casos de teste no formato do padrão
 ```
 
@@ -44,7 +44,8 @@ consultor-de-viagens/
 |---|---|---|
 | Busca na web | Sim | Preços, feriados, regras de bagagem e pagamento, reputação |
 | Navegador controlado pela IA | Recomendado | Lista de vendedores no Kayak, sites de companhias e agências. Sem ele, a skill avisa que a comparação de agências ficou limitada e passa os links |
-| Python com `openpyxl` | Recomendado | Gerar a planilha. Sem ele, a skill entrega as tabelas em CSV |
+| Python com `openpyxl` | Recomendado | Gerar a planilha em Excel ou CSV. Sem ele, a skill monta as tabelas em CSV à mão |
+| Conector do Google Drive | Opcional | Enviar a planilha direto para o Google Sheets. Sem ele, a skill entrega o .xlsx com o passo a passo de importação |
 
 ## Como instalar
 

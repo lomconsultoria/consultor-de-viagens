@@ -1,17 +1,39 @@
-# Planilha Excel
+# Planilha: Excel, Google Sheets ou CSV
 
-A planilha deixa a pessoa simular (outra diária, outro número de pessoas, outra quantidade de parcelas) sem pedir uma nova cotação. Por isso os totais são fórmulas, e as premissas ficam em células editáveis.
+A planilha deixa a pessoa simular (outra diária, outro número de pessoas, outra quantidade de parcelas) sem pedir uma nova cotação. Por isso, no Excel e no Google Sheets, os totais são fórmulas e as premissas ficam em células editáveis.
+
+## Qual formato usar
+
+| Formato | Quando | Fórmulas editáveis? | Como gerar |
+|---|---|---|---|
+| **Excel (.xlsx)** | Padrão, quando a pessoa não pede outro | Sim | `--formato xlsx` (padrão) |
+| **Google Sheets** | A pessoa usa Google Drive ou quer compartilhar a planilha | Sim (o Google converte as fórmulas do .xlsx) | Gerar o .xlsx e enviar ao Drive convertendo (abaixo) |
+| **CSV** | A pessoa vai importar em outro sistema ou não tem Excel | Não: valores já calculados | `--formato csv` (um arquivo por aba) |
+
+Pergunte o formato na abertura; sem resposta, use Excel. Pode gerar mais de um (`--formato todos` gera Excel e CSV).
+
+### Google Sheets
+1. Gere o `.xlsx` com o script.
+2. **Com conector do Google Drive:** envie o arquivo pedindo conversão para Planilhas Google (no Drive, o tipo de destino é `application/vnd.google-apps.spreadsheet`; muitos conectores convertem por padrão ao enviar um .xlsx). Depois, confira em uma célula de total que a fórmula foi mantida. O arquivo fica privado, só para a pessoa: não compartilhe com ninguém sem ela pedir.
+3. **Sem conector:** entregue o `.xlsx` e o passo a passo: no Google Drive, "Novo" → "Upload de arquivo" → abrir com "Planilhas Google"; ou, numa planilha nova, "Arquivo" → "Importar".
+4. A fonte Gothic A1 existe no Google Sheets (menu de fontes → "Mais fontes"); se não aparecer, o Sheets usa a padrão.
+
+### CSV
+- Um arquivo por aba, em uma pasta `<nome>_csv/`: `1-resumo.csv`, `2-comparacao-de-datas.csv`, `3-fontes.csv`, `4-pagamento.csv`, `5-premissas-e-lacunas.csv`.
+- Padrão para o Excel em português: separador `;`, decimal `,` e codificação UTF-8 com BOM (acentos aparecem certos). Para outro sistema, use `--separador ","` e `--decimal "."`.
+- Valores já calculados, porque CSV não guarda fórmulas. Diga isso à pessoa.
+- Texto que começa com `=`, `+`, `-` ou `@` ganha um apóstrofo na frente, para não virar fórmula ao abrir. Links que não sejam `http(s)` viram "—".
 
 ## Como gerar
 
 1. Monte um JSON no formato abaixo com os dados da cotação.
-2. Rode: `python scripts/gerar_planilha.py dados.json "Viagem_ORIG-DEST_dd-mm-aaaa_cotacao_aaaa-mm-dd.xlsx"`
+2. Rode: `python scripts/gerar_planilha.py dados.json "Viagem_ORIG-DEST_dd-mm-aaaa_cotacao_aaaa-mm-dd.xlsx" --formato xlsx|csv|todos`
    - Opcional: `--fonte "Arial"` para trocar a fonte (padrão: Gothic A1, identidade da LOM).
 3. O script nunca sobrescreve: se o arquivo existir, acrescenta a hora ao nome.
 4. O script imprime os totais por pessoa calculados em Python. **Confira com os da resposta** antes de entregar. Se houver LibreOffice, recalcule as fórmulas para os valores aparecerem também em visualizadores que não calculam.
-5. Salve na pasta do projeto da pessoa e diga onde ficou. Sem pasta, envie o arquivo na conversa. Sem Python, entregue as mesmas tabelas em CSV e avise.
+5. Salve na pasta do projeto da pessoa e diga onde ficou. Sem pasta, envie o arquivo na conversa. Sem Python, monte os CSV à mão com as mesmas colunas e avise.
 
-## Abas geradas
+## Abas geradas (as mesmas no Excel, no Google Sheets e nos CSV)
 1. **Resumo:** recomendação, totais por pessoa e do grupo (PIX e cartão), diferença de cada alternativa, riscos e crédito.
 2. **Comparação de datas:** uma linha por opção, com voos, preços coletados (azul), hospedagem extra, totais, diferença, diária de equilíbrio e veredito (fórmulas).
 3. **Fontes:** trecho, voo, fonte, PIX e cartão por pessoa, parcelamento, tarifa e bagagem, reputação, link e hora.
