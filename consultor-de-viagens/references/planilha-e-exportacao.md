@@ -86,6 +86,7 @@ Pergunte o formato na abertura; sem resposta, use Excel. Pode gerar mais de um (
 - Obrigatórios: `titulo`, `consulta`, `recomendacao`, `premissas` (com `passageiros` e `diaria_extra_grupo`) e `opcoes`.
 - `opcoes`: a recomendada primeiro (o script reordena se `recomendada: true`). Valores por pessoa como número; sem dado, `null` (vira "lacuna").
 - `simulacao.base`: `ida_pix`, `ida_cartao` ou `volta` (da opção recomendada).
+- `opcoes[].veredito` (opcional): texto que substitui o veredito automático. Use quando o preço sozinho não decide, por exemplo uma opção mais barata mas com horas a mais de viagem ou chegada de madrugada. Sem ele, a planilha calcula o veredito só pelo preço.
 
 ## Regras do arquivo (já aplicadas pelo script)
 - Totais, hospedagem extra, diferenças e parcelas são fórmulas ligadas às premissas.

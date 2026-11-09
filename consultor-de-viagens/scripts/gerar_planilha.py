@@ -208,6 +208,9 @@ def gerar(d, saida):
         formula(cd.cell(row=r, column=19), f'=IF(L{r}=0,"—",IFERROR(($N${r0}-I{r}-K{r})/L{r},"lacuna"))')
         if o.get("recomendada"):
             texto(cd.cell(row=r, column=20), o.get("veredito", "Recomendada"), bold=True)
+        elif o.get("veredito"):
+            # Veredito escrito pelo consultor (ex.: mais barata, mas com 5 h a mais de viagem)
+            texto(cd.cell(row=r, column=20), o["veredito"])
         else:
             extra = f'&IF(L{r}>0," (só vale se a noite custar até R$ "&TEXT(S{r},"0")&" por pessoa)","")'
             sem_preco = (f'IF(L{r}>0,"Preencher preços: só compensa se a passagem sair mais de R$ "&TEXT(M{r},"0")'
@@ -373,6 +376,8 @@ def calcular(d):
             li["equilibrio"] = None
         if li.get("recomendada"):
             li["veredito_calc"] = li.get("veredito", "Recomendada")
+        elif li.get("veredito"):
+            li["veredito_calc"] = li["veredito"]
         elif li["diferenca"] is None:
             n = li.get("noites_extras", 0) or 0
             li["veredito_calc"] = (f"Preencher preços: só compensa se a passagem sair mais de R$ {li['hosp_pp']:.0f} "
