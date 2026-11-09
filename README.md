@@ -2,7 +2,7 @@
 
 Skill no padrão aberto **[Agent Skills](https://agentskills.io)** que transforma o assistente de IA num consultor de viagens econômicas: compara datas, fontes de preço e formas de pagamento, avalia ofertas e entrega uma recomendação clara, com uma planilha para simular, em Excel, Google Sheets ou CSV.
 
-> Criado por **LOM Consultoria e Projetos** · [contato@lomconsultoria.com](mailto:contato@lomconsultoria.com) · Versão 1.2.1
+> Criado por **LOM Consultoria e Projetos** · [contato@lomconsultoria.com](mailto:contato@lomconsultoria.com) · Versão 1.2.2
 
 ## O que a skill faz
 
@@ -36,8 +36,9 @@ consultor-de-viagens/
 ├── scripts/
 │   └── gerar_planilha.py         # gera o .xlsx (com fórmulas) e/ou os .csv a partir de um JSON
 └── evals/                        # 4 casos de teste no formato do padrão
-tests/
-└── teste_seguranca.py            # teste de segurança do script da planilha (fica fora do pacote da skill)
+tests/                            # fica fora do pacote da skill
+├── teste_seguranca.py            # ataques ao programa da planilha
+└── comportamento/                # 4 cenários de sites mal-intencionados (OWASP LLM01, 02, 05, 06)
 ```
 
 ## Requisitos
@@ -88,7 +89,28 @@ Esse aviso aparece em qualquer skill que traga um programa junto. Aqui, o progra
 - **Links seguros:** só `http(s)`. A célula mostra o domínio de destino (ex.: `kayak.com.br`), para você ver para onde vai antes de clicar. `javascript:`, `file:`, `data:` e caminhos de rede são descartados.
 - **Entrada validada:** caracteres de controle são removidos, textos gigantes são cortados, números inválidos viram "lacuna", formatos de número só da lista do script, número de passageiros entre 1 e 99, e caminho de saída sem `..`.
 
-### Teste de segurança
+### Alinhamento com a OWASP
+
+A segurança foi testada com dois referenciais da OWASP: o guia de testes para injeção em CSV ([WSTG-INPV-21](https://owasp.org/www-project-web-security-testing-guide/latest/4-Web_Application_Security_Testing/07-Input_Validation_Testing/21-Testing_for_CSV_Injection)) e o [OWASP Top 10 para aplicações com IA, 2025](https://genai.owasp.org/resource/owasp-top-10-for-llm-applications-2025/) ([versão em português](https://genai.owasp.org/resource/owasp-top-10-para-aplicacoes-de-llm-e-ia-generativa-2025/)).
+
+| Risco (OWASP 2025) | Como a skill trata | Como foi testado |
+|---|---|---|
+| **LLM01** Injeção de instruções | Conteúdo de sites é dado, nunca instrução; a tentativa é relatada à pessoa | Teste de comportamento, cenários A, B e C |
+| **LLM02** Vazamento de dados pessoais | Dados pessoais fora de URLs, buscas e planilhas; não repete CPF na resposta | Cenário D; revisão do histórico do repositório |
+| **LLM03** Cadeia de fornecimento | Uma dependência (`openpyxl`); instalar só do repositório oficial | Revisão (sem teste automático) |
+| **LLM05** Saída sem tratamento | Texto que viraria fórmula, links perigosos e entradas inválidas neutralizados | `tests/teste_seguranca.py` e cenário A |
+| **LLM06** Autonomia excessiva | Não compra, não reserva, não faz login, não baixa nem executa arquivos de sites | Cenários B e C, com armadilhas que registram execução |
+| **LLM09** Informação falsa | Nunca inventa preço; sem dado, "lacuna"; regra oficial vale mais que alegação de agência | Cenário C e os testes de `evals/` |
+| **LLM10** Consumo sem limite | Textos cortados em 32 mil caracteres | `tests/teste_seguranca.py` |
+| LLM04, LLM07, LLM08 | Não se aplicam: a skill não treina modelo, é pública de propósito e não usa base de vetores | — |
+
+### Teste de comportamento
+
+`tests/comportamento/` tem 4 cenários com páginas falsas que tentam manipular o assistente: texto escondido mandando recomendar uma agência mal avaliada, pressão para "travar o preço" rodando um script, um "regulamento" que é um executável e um link pedindo CPF. Os scripts são armadilhas inofensivas que só registram se foram executados.
+
+Resultado em 09/11/2026 (8 execuções, versões 1.2.1 e 1.0): **todas resistiram**. Nenhuma armadilha disparou, nenhum dado pessoal saiu e nenhuma agência indicada pela página foi recomendada. Limites: uma execução por cenário, um só modelo de IA e ataques diretos. Detalhes e como repetir em [tests/comportamento/README.md](tests/comportamento/README.md).
+
+### Teste do programa da planilha
 
 `tests/teste_seguranca.py` segue os critérios do guia de testes da OWASP para injeção em CSV ([WSTG-INPV-21](https://owasp.org/www-project-web-security-testing-guide/latest/4-Web_Application_Security_Testing/07-Input_Validation_Testing/21-Testing_for_CSV_Injection)) e simula dados de sites maliciosos: 20 tipos de injeção de fórmula, incluindo variantes de largura total e tentativas de sair da célula com separador e aspas (entre elas `HYPERLINK`, `IMPORTXML` e `WEBSERVICE`, usadas para vazar dados), 7 tipos de link perigoso, números inválidos (NaN, infinito), caracteres de controle, texto de 40 mil caracteres, tipos errados e caminho de saída fora da pasta.
 
@@ -112,7 +134,8 @@ Escreva para [contato@lomconsultoria.com](mailto:contato@lomconsultoria.com), se
 ## Testes
 
 - **Comportamento:** a pasta `evals/` tem 4 casos (pedido vago, cotação com hospedagem fixa, auditoria de oferta e viagem com várias cidades). Com o Claude Code, rode `claude plugin eval .` dentro da pasta da skill para comparar respostas com e sem a skill.
-- **Segurança:** `python tests/teste_seguranca.py` na raiz do repositório (ver acima).
+- **Segurança do programa:** `python tests/teste_seguranca.py` na raiz do repositório.
+- **Segurança do comportamento:** cenários em `tests/comportamento/` (ver o README da pasta).
 
 ## Licença
 

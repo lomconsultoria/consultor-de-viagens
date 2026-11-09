@@ -1,5 +1,11 @@
 # Histórico de versões
 
+## 1.2.2 — novembro de 2026 (segurança)
+- **Teste de comportamento** em `tests/comportamento/`: 4 cenários de sites mal-intencionados (injeção de recomendação, pressão de compra com script, "regulamento" executável e pedido de CPF), mapeados no OWASP Top 10 para IA 2025. Versões 1.2.1 e 1.0: todas resistiram, 0 armadilhas disparadas.
+- **Regra 12 mais clara:** a tentativa de manipulação é relatada de forma visível (aviso do topo ou Parte 3) e vira sinal de alerta sobre o vendedor. No teste, uma execução tinha relatado só nas lacunas.
+- **Corrigido:** veredito mostrava "R$ lacuna" quando faltava a diária; agora pede "Preencher preços e a diária extra".
+- README com a tabela de alinhamento à OWASP.
+
 ## 1.2.1 — novembro de 2026 (segurança)
 Teste de segurança com dados maliciosos (`tests/teste_seguranca.py`): a 1.2 tinha 7 tipos de falha (394 ocorrências somando os cenários); a 1.2.1 passa sem nenhuma.
 - **Corrigido:** o título da cotação podia virar fórmula no Excel e no Google Sheets (ex.: `=HYPERLINK` para vazar dados). Agora uma varredura final deixa como fórmula só o que o script criou.

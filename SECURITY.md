@@ -4,8 +4,8 @@
 
 | Versão | Recebe correções de segurança |
 |---|---|
-| 1.2.1 (atual) | Sim |
-| 1.2 ou anterior | Não: atualize para a 1.2.1 |
+| 1.2.2 (atual) | Sim |
+| 1.2.1 ou anterior | Não: atualize para a 1.2.2 |
 
 ## Como reportar
 
@@ -23,9 +23,10 @@ Não abra uma issue pública antes da correção. A LOM Consultoria responde em 
 - Falhas do script com dados vindos de sites (quebra, gravação fora da pasta, sobrescrita de arquivos).
 - Instruções da skill que levem o assistente a comprar, fazer login, expor dados pessoais ou seguir instruções de sites.
 
-## Teste automatizado
+## Testes
 
-`python tests/teste_seguranca.py` roda a bateria de ataques ao script e sai com código 1 se encontrar problema. Rode antes de publicar qualquer mudança no script.
+- `python tests/teste_seguranca.py` roda a bateria de ataques ao script e sai com código 1 se encontrar problema. Rode antes de publicar qualquer mudança no script.
+- `tests/comportamento/` tem os cenários de sites mal-intencionados. Rode antes de publicar mudanças nas regras do `SKILL.md`.
 
 ---
 LOM Consultoria e Projetos · contato@lomconsultoria.com

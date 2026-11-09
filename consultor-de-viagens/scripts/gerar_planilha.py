@@ -330,8 +330,8 @@ def gerar(d, saida):
             texto(cd.cell(row=r, column=20), o["veredito"])
         else:
             extra = f'&IF(L{r}>0," (só vale se a noite custar até R$ "&TEXT(S{r},"0")&" por pessoa)","")'
-            sem_preco = (f'IF(L{r}>0,"Preencher preços: só compensa se a passagem sair mais de R$ "&TEXT(M{r},"0")'
-                         f'&" por pessoa mais barata que a recomendada","Preencher preços")')
+            sem_preco = (f'IF(AND(ISNUMBER(L{r}),L{r}>0,ISNUMBER(M{r})),"Preencher preços: só compensa se a passagem sair mais de R$ "&TEXT(M{r},"0")'
+                         f'&" por pessoa mais barata que a recomendada",IF(AND(ISNUMBER(L{r}),L{r}>0),"Preencher preços e a diária extra","Preencher preços"))')
             formula(cd.cell(row=r, column=20),
                     f'=IF(ISNUMBER(R{r}),IF(R{r}<0,"Vale a pena: economiza R$ "&TEXT(-R{r},"0"),'
                     f'"Não vale: R$ "&TEXT(R{r},"0")&" a mais por pessoa"{extra}),{sem_preco})', fmt="General")
@@ -511,7 +511,8 @@ def calcular(d):
         elif li["diferenca"] is None:
             n = li.get("noites_extras", 0) or 0
             li["veredito_calc"] = (f"Preencher preços: só compensa se a passagem sair mais de R$ {li['hosp_pp']:.0f} "
-                                   "por pessoa mais barata que a recomendada") if n and _num(li["hosp_pp"]) else "Preencher preços"
+                                   "por pessoa mais barata que a recomendada") if n and _num(li["hosp_pp"]) else (
+                                   "Preencher preços e a diária extra" if n else "Preencher preços")
         elif li["diferenca"] < 0:
             li["veredito_calc"] = f"Vale a pena: economiza R$ {-li['diferenca']:.0f}"
         else:
