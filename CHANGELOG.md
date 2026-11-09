@@ -1,5 +1,16 @@
 # Histórico de versões
 
+## 1.2.1 — novembro de 2026 (segurança)
+Teste de segurança com dados maliciosos (`tests/teste_seguranca.py`): a 1.2 tinha 7 tipos de falha (394 ocorrências somando os cenários); a 1.2.1 passa sem nenhuma.
+- **Corrigido:** o título da cotação podia virar fórmula no Excel e no Google Sheets (ex.: `=HYPERLINK` para vazar dados). Agora uma varredura final deixa como fórmula só o que o script criou.
+- **Corrigido:** o formato de número das premissas era livre e podia exibir um valor falso. Agora só formatos da lista do script.
+- **Corrigido:** CSV não protegia textos começando com tabulação ou quebra de linha.
+- **Corrigido:** caracteres de controle vindos de sites quebravam a geração; texto no lugar de número também. Agora são limpos ou viram "lacuna".
+- **Novo:** links mostram o domínio de destino; `javascript:`, `file:`, `data:` e caminhos de rede são descartados.
+- **Novo:** validação de passageiros (1 a 99), caminho de saída sem `..`, sem seguir atalho (symlink) pendente, extensão `.xlsx` garantida.
+- **Novo:** a skill não baixa nem abre arquivos de sites; o nome do arquivo usa só códigos, datas e caracteres seguros.
+- README com a seção Segurança (o que o aviso "executa código" significa, proteções, riscos que continuam) e `SECURITY.md` para reportar vulnerabilidades.
+
 ## 1.2 — novembro de 2026
 - **Três formatos de planilha:** Excel (padrão, com fórmulas), Google Sheets (envio ao Drive convertendo o .xlsx, fórmulas preservadas) e CSV (um arquivo por aba, valores calculados, `;` e vírgula decimal para o Excel em português).
 - A pergunta de abertura passa a perguntar o formato da planilha.

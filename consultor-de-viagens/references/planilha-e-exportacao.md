@@ -22,12 +22,13 @@ Pergunte o formato na abertura; sem resposta, use Excel. Pode gerar mais de um (
 - Um arquivo por aba, em uma pasta `<nome>_csv/`: `1-resumo.csv`, `2-comparacao-de-datas.csv`, `3-fontes.csv`, `4-pagamento.csv`, `5-premissas-e-lacunas.csv`.
 - Padrão para o Excel em português: separador `;`, decimal `,` e codificação UTF-8 com BOM (acentos aparecem certos). Para outro sistema, use `--separador ","` e `--decimal "."`.
 - Valores já calculados, porque CSV não guarda fórmulas. Diga isso à pessoa.
-- Texto que começa com `=`, `+`, `-` ou `@` ganha um apóstrofo na frente, para não virar fórmula ao abrir. Links que não sejam `http(s)` viram "—".
+- Texto que começa com `=`, `+`, `-`, `@`, tabulação ou quebra de linha ganha um apóstrofo na frente, para não virar fórmula ao abrir. Links que não sejam `http(s)` viram "—".
 
 ## Como gerar
 
 1. Monte um JSON no formato abaixo com os dados da cotação.
 2. Rode: `python scripts/gerar_planilha.py dados.json "Viagem_ORIG-DEST_dd-mm-aaaa_cotacao_aaaa-mm-dd.xlsx" --formato xlsx|csv|todos`
+   - Monte o nome do arquivo só com códigos de aeroporto, datas, letras, números, `-` e `_`, e sempre entre aspas. Nunca use no nome texto copiado de sites: um nome com `;`, `|`, `$` ou crase poderia virar comando no terminal.
    - Opcional: `--fonte "Arial"` para trocar a fonte (padrão: Gothic A1, identidade da LOM).
 3. O script nunca sobrescreve: se o arquivo existir, acrescenta a hora ao nome.
 4. O script imprime os totais por pessoa calculados em Python. **Confira com os da resposta** antes de entregar. Se houver LibreOffice, recalcule as fórmulas para os valores aparecerem também em visualizadores que não calculam.
@@ -93,7 +94,10 @@ Pergunte o formato na abertura; sem resposta, use Excel. Pode gerar mais de um (
 ## Regras do arquivo (já aplicadas pelo script)
 - Totais, hospedagem extra, diferenças e parcelas são fórmulas ligadas às premissas.
 - Moeda no formato `"R$" #,##0.00` (o Excel exibe vírgula e ponto conforme o idioma). Sem dado: "lacuna", nunca zero.
-- Texto vindo de sites que comece com `=`, `+`, `-` ou `@` é gravado como texto, para não virar fórmula.
-- Links só `http(s)` dos vendedores consultados ou montados pela pesquisa; nunca de anúncios ou do texto de páginas.
+- Texto vindo de sites que comece com `=`, `+`, `-`, `@`, tabulação ou quebra de linha é gravado como texto, para não virar fórmula. Uma varredura final garante que só as fórmulas do próprio script fiquem como fórmula.
+- Caracteres de controle são removidos, textos acima de 32 mil caracteres são cortados e números inválidos (NaN, infinito, texto no lugar de número) viram "lacuna".
+- Links só `http(s)` dos vendedores consultados ou montados pela pesquisa; nunca de anúncios ou do texto de páginas. Na planilha, a célula mostra o domínio de destino (ex.: `kayak.com.br`), para a pessoa ver para onde vai antes de clicar. `javascript:`, `file:`, `data:` e caminhos de rede viram "—".
+- Formato de número só da lista do script (moeda, inteiro, decimal, porcentagem): um formato livre poderia exibir um valor diferente do real.
+- `passageiros` precisa ser inteiro de 1 a 99; o caminho de saída não aceita `..`.
 - Sem dados pessoais: nada de nomes, CPF, endereço, e-mail ou telefone; hóspedes só como número.
 - Rodapé do Resumo com o crédito da LOM Consultoria.

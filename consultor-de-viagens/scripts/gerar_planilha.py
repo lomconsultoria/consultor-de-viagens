@@ -21,8 +21,11 @@ Licença CC BY-NC 4.0.
 import argparse
 import datetime as dt
 import json
+import math
 import os
+import re
 import sys
+from urllib.parse import urlparse
 
 try:
     from openpyxl import Workbook
@@ -42,7 +45,14 @@ INP = PatternFill("solid", fgColor="FFF2CC")
 _thin = Side(style="thin", color="BFBFBF")
 BORDA = Border(left=_thin, right=_thin, top=_thin, bottom=_thin)
 CREDITO = "Gerado com a skill Consultor de Viagens — LOM Consultoria e Projetos — contato@lomconsultoria.com"
-PERIGOSOS = ("=", "+", "-", "@")
+# Caracteres que fazem Excel, LibreOffice ou Google Sheets tratar o texto como fórmula
+PERIGOSOS = ("=", "+", "-", "@", "\t", "\r", "\n", "\uff1d")
+# Caracteres de controle que corrompem o .xlsx (o openpyxl recusa) ou escondem conteúdo
+_CONTROLE = re.compile(r"[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]")
+LIMITE_TEXTO = 32000  # o Excel aceita até 32.767 caracteres por célula
+# Formatos de número aceitos nas premissas (um formato livre poderia exibir um valor falso)
+FORMATOS = {'"R$" #,##0.00', "0", "0.00", "0%", "0.0%", "General"}
+_FORMULAS = set()  # células criadas pela função formula(); todas as outras ficam como texto
 
 FONTE = "Gothic A1"
 
@@ -82,6 +92,7 @@ def numero(cell, valor, fmt=BRL, entrada=True, bold=False):
 
 
 def formula(cell, f, fmt=BRL, bold=False, color="000000"):
+    _FORMULAS.add((cell.parent.title, cell.coordinate))
     cell.value = f
     cell.number_format = fmt
     cell.font = fnt(bold=bold, color=color)
@@ -90,13 +101,27 @@ def formula(cell, f, fmt=BRL, bold=False, color="000000"):
     return cell
 
 
+def _host(url):
+    """Domínio de um link http(s) válido; None para qualquer outro esquema."""
+    if not isinstance(url, str) or not url.lower().startswith(("http://", "https://")):
+        return None
+    try:
+        h = urlparse(url).hostname
+    except ValueError:
+        return None
+    return h or None
+
+
 def link(cell, url):
-    if isinstance(url, str) and url.lower().startswith(("http://", "https://")):
-        cell.value = "abrir"
+    host = _host(url)
+    if host:
+        # Mostra o domínio de destino, para a pessoa ver para onde o link leva antes de clicar
+        cell.value = host
         cell.hyperlink = url
         cell.font = fnt(color=LINK)
     else:
-        texto(cell, url or "—")
+        # Esquemas como javascript:, file: ou \\servidor não viram link nem ficam visíveis como texto
+        texto(cell, "—" if not url or (isinstance(url, str) and _ESQUEMAS_RUINS.search(url)) else url)
     cell.border = BORDA
     return cell
 
@@ -116,13 +141,24 @@ def larguras(ws, ws_larguras):
         ws.column_dimensions[get_column_letter(i)].width = w
 
 
+def checar_saida(path, ext=None):
+    """Recusa caminhos com '..' ou caracteres de controle e garante a extensão."""
+    if _CONTROLE.search(path) or "\n" in path or "\r" in path:
+        sys.exit("Erro: o caminho de saída tem caracteres inválidos.")
+    if ".." in re.split(r"[\\/]", path):
+        sys.exit("Erro: o caminho de saída não pode subir pastas com '..'.")
+    if ext and not path.lower().endswith(ext):
+        path += ext
+    return path
+
+
 def caminho_livre(path):
-    if not os.path.exists(path):
+    if not os.path.lexists(path):
         return path
     base, ext = os.path.splitext(path)
     cand = f"{base}_{dt.datetime.now():%H%M}{ext}"
     n = 2
-    while os.path.exists(cand):
+    while os.path.lexists(cand):
         cand = f"{base}_{dt.datetime.now():%H%M}_{n}{ext}"
         n += 1
     return cand
@@ -132,9 +168,23 @@ def validar(d):
     faltando = [k for k in ("titulo", "consulta", "recomendacao", "premissas", "opcoes") if k not in d]
     if faltando:
         sys.exit(f"Erro: JSON sem os campos obrigatórios: {', '.join(faltando)}")
-    chaves = {p.get("chave") for p in d["premissas"]}
-    if "passageiros" not in chaves:
+    if isinstance(d.get("recomendacao"), str):
+        d["recomendacao"] = [d["recomendacao"]]
+    if isinstance(d.get("riscos"), str):
+        d["riscos"] = [d["riscos"]]
+    for k in ("recomendacao", "premissas", "opcoes", "riscos", "fontes", "pagamento", "simulacao", "lacunas"):
+        if k in d and not isinstance(d[k], list):
+            sys.exit(f"Erro: '{k}' precisa ser uma lista.")
+    for k in ("premissas", "opcoes", "fontes", "pagamento", "simulacao", "lacunas"):
+        if any(not isinstance(x, dict) for x in d.get(k, [])):
+            sys.exit(f"Erro: cada item de '{k}' precisa ser um objeto.")
+    if any(not isinstance(p.get("chave"), str) for p in d["premissas"]):
+        sys.exit("Erro: toda premissa precisa de 'chave'.")
+    pax = next((p.get("valor") for p in d["premissas"] if p["chave"] == "passageiros"), None)
+    if pax is None:
         sys.exit("Erro: premissa obrigatória ausente: passageiros")
+    if not (isinstance(pax, int) and not isinstance(pax, bool) and 1 <= pax <= 99):
+        sys.exit("Erro: 'passageiros' precisa ser um número inteiro entre 1 e 99.")
     if not d["opcoes"]:
         sys.exit("Erro: 'opcoes' está vazio.")
     normalizar(d)
@@ -142,6 +192,22 @@ def validar(d):
 
 def _soma(vals):
     return round(sum(vals), 2) if vals and all(_num(v) for v in vals) else None
+
+
+def _limpar(x):
+    """Limpa em profundidade o que veio de sites: tira caracteres de controle, corta textos
+    longos demais e troca números não finitos (NaN, infinito) por vazio ("lacuna")."""
+    if isinstance(x, dict):
+        for k in list(x):
+            x[k] = _limpar(x[k])
+    elif isinstance(x, list):
+        for i, v in enumerate(x):
+            x[i] = _limpar(v)
+    elif isinstance(x, str):
+        return _CONTROLE.sub("", x)[:LIMITE_TEXTO]
+    elif isinstance(x, float) and not math.isfinite(x):
+        return None
+    return x
 
 
 def normalizar(d):
@@ -152,6 +218,16 @@ def normalizar(d):
     - Viagens com várias cidades: 'trechos' (lista) substitui ida/volta. A soma de todos os
       trechos vai para as colunas de passagens; a volta fica 0 porque já está somada.
     """
+    _limpar(d)
+    for o in d["opcoes"]:
+        if "noites_extras" in o and not (_num(o["noites_extras"]) and o["noites_extras"] >= 0):
+            o["noites_extras"] = None  # vira "lacuna"
+    for sm in d.get("simulacao", []):
+        if "parcelas" in sm and not (_num(sm["parcelas"]) and sm["parcelas"] >= 1):
+            sm["parcelas"] = None
+    for p in d["premissas"]:
+        if p.get("formato") not in FORMATOS:
+            p.pop("formato", None)
     if not any(p.get("chave") == "diaria_extra_grupo" for p in d["premissas"]):
         d["premissas"].append({
             "chave": "diaria_extra_grupo", "rotulo": "Diária extra do grupo (R$)", "valor": None,
@@ -206,7 +282,7 @@ def gerar(d, saida):
         texto(pr.cell(row=i, column=1), l.get("item"))
         texto(pr.cell(row=i, column=2), l.get("situacao"))
         como = l.get("como_conferir", "")
-        if isinstance(como, str) and como.lower().startswith(("http://", "https://")):
+        if _host(como) or (isinstance(como, str) and _ESQUEMAS_RUINS.search(como)):
             link(pr.cell(row=i, column=3), como)
         else:
             texto(pr.cell(row=i, column=3), como)
@@ -236,7 +312,7 @@ def gerar(d, saida):
         numero(cd.cell(row=r, column=11), o.get("volta_pp"))
         numero(cd.cell(row=r, column=12), o.get("noites_extras", 0), fmt="0")
         if o.get("fonte_ida"):
-            cd.cell(row=r, column=9).comment = Comment(str(o["fonte_ida"]), "Cotação")
+            cd.cell(row=r, column=9).comment = Comment(str(o["fonte_ida"])[:LIMITE_TEXTO], "Cotação")
         if o.get("fonte_volta"):
             cd.cell(row=r, column=11).comment = Comment(str(o["fonte_volta"]), "Cotação")
         formula(cd.cell(row=r, column=13), f'=IF(L{r}=0,0,IFERROR(L{r}*{diaria}/{pax},"lacuna"))')
@@ -266,8 +342,8 @@ def gerar(d, saida):
         try:
             pax_v = next(p["valor"] for p in d["premissas"] if p["chave"] == "passageiros")
             diaria_v = next(p["valor"] for p in d["premissas"] if p["chave"] == "diaria_extra_grupo")
-            n_ext = o.get("noites_extras", 0) or 0
-            hosp = n_ext * diaria_v / pax_v if n_ext else 0
+            n_ext = o.get("noites_extras", 0)
+            hosp = n_ext * diaria_v / pax_v if n_ext else (0 if n_ext == 0 else None)
             totais_py.append((o.get("opcao"), round(o["ida_pix_pp"] + o["volta_pp"] + hosp, 2),
                               round(o["ida_cartao_pp"] + o["volta_pp"] + hosp, 2)
                               if isinstance(o.get("ida_cartao_pp"), (int, float)) else "lacuna"))
@@ -377,7 +453,15 @@ def gerar(d, saida):
     rs.cell(row=lr, column=1, value=CREDITO).font = fnt(italic=True, color="808080")
     larguras(rs, [70, 18])
 
-    saida = caminho_livre(saida)
+    # Defesa em profundidade: qualquer célula com cara de fórmula que não foi criada por
+    # formula() vira texto (ex.: um título vindo de site que comece com "=").
+    for ws in wb:
+        for row in ws.iter_rows():
+            for cel in row:
+                if (isinstance(cel.value, str) and cel.value.startswith(PERIGOSOS)
+                        and (ws.title, cel.coordinate) not in _FORMULAS):
+                    cel.data_type = "s"
+    saida = caminho_livre(checar_saida(saida, ".xlsx"))
     os.makedirs(os.path.dirname(os.path.abspath(saida)), exist_ok=True)
     wb.save(saida)
     return saida, totais_py
@@ -388,7 +472,7 @@ def gerar(d, saida):
 # ---------------------------------------------------------------------------
 
 def _num(v):
-    return isinstance(v, (int, float)) and not isinstance(v, bool)
+    return isinstance(v, (int, float)) and not isinstance(v, bool) and math.isfinite(v)
 
 
 def calcular(d):
@@ -399,8 +483,8 @@ def calcular(d):
     opcoes = sorted(d["opcoes"], key=lambda o: not o.get("recomendada", False))
     linhas = []
     for o in opcoes:
-        n = o.get("noites_extras", 0) or 0
-        hosp = 0 if not n else (n * diaria / pax if _num(diaria) and _num(pax) and pax else None)
+        n = o.get("noites_extras", 0)
+        hosp = None if n is None else 0 if not n else (n * diaria / pax if _num(diaria) and _num(pax) and pax else None)
         ida_p, ida_c, volta = o.get("ida_pix_pp"), o.get("ida_cartao_pp"), o.get("volta_pp")
         t_pix = ida_p + volta + hosp if all(_num(x) for x in (ida_p, volta, hosp)) else None
         t_car = ida_c + volta + hosp if all(_num(x) for x in (ida_c, volta, hosp)) else None
@@ -409,9 +493,11 @@ def calcular(d):
                            grupo_cartao=t_car * pax if _num(t_car) else None))
     base = linhas[0]["total_pix_pp"]
     for li in linhas:
-        n = li.get("noites_extras", 0) or 0
+        n = li.get("noites_extras", 0)
         li["diferenca"] = li["total_pix_pp"] - base if _num(li["total_pix_pp"]) and _num(base) else None
-        if not n:
+        if n is None:
+            li["equilibrio"] = None
+        elif not n:
             li["equilibrio"] = "—"
         elif _num(base) and _num(li.get("ida_pix_pp")) and _num(li.get("volta_pp")):
             li["equilibrio"] = (base - li["ida_pix_pp"] - li["volta_pp"]) / n
@@ -444,14 +530,22 @@ def _cel_csv(v, decimal):
     return "'" + s if s.startswith(PERIGOSOS) else s
 
 
+_ESQUEMAS_RUINS = re.compile(r"^\s*(javascript|vbscript|data|file|ms-[a-z-]+|about|blob):|^\s*\\\\", re.I)
+
+
+def _texto_csv_link(v):
+    """Campo que pode ser link ou texto: mantém http(s) e texto comum, descarta esquemas perigosos."""
+    return "—" if isinstance(v, str) and _ESQUEMAS_RUINS.search(v) else v
+
+
 def _link_csv(url):
-    return url if isinstance(url, str) and url.lower().startswith(("http://", "https://")) else "—"
+    return url if _host(url) else "—"
 
 
 def gerar_csv(d, pasta, sep=";", decimal=","):
     import csv
     validar(d)
-    pasta = caminho_livre(pasta)
+    pasta = caminho_livre(checar_saida(pasta))
     os.makedirs(pasta, exist_ok=True)
     linhas, pax = calcular(d)
 
@@ -496,14 +590,14 @@ def gerar_csv(d, pasta, sep=";", decimal=","):
     for s in d.get("simulacao", []):
         v = rec.get(colmap.get(s.get("base", ""), "ida_pix_pp"))
         tot = v * pax if _num(v) else None
-        parc = s.get("parcelas", 1) or 1
-        pag.append([f"Simulação: {s.get('trecho')}", s.get("forma"), f"{parc}x", None, None,
-                    f"Total do grupo {_cel_csv(tot, decimal)}; parcela {_cel_csv(tot / parc if _num(tot) else None, decimal)}. {s.get('obs', '')}", None])
+        parc = s.get("parcelas", 1)
+        pag.append([f"Simulação: {s.get('trecho')}", s.get("forma"), f"{parc}x" if _num(parc) else "lacuna", None, None,
+                    f"Total do grupo {_cel_csv(tot, decimal)}; parcela {_cel_csv(tot / parc if _num(tot) and _num(parc) else None, decimal)}. {s.get('obs', '')}", None])
     grava("4-pagamento.csv", ["Canal", "Desconto no PIX", "Parcelas sem juros", "Parcela mínima", "Juros",
                               "Observações", "Fonte"], pag)
 
     prem = [["Premissa", p.get("rotulo", p["chave"]), p.get("valor"), p.get("fonte", "")] for p in d["premissas"]]
-    prem += [["Lacuna", l.get("item"), l.get("situacao"), l.get("como_conferir")] for l in d.get("lacunas", [])]
+    prem += [["Lacuna", l.get("item"), l.get("situacao"), _texto_csv_link(l.get("como_conferir"))] for l in d.get("lacunas", [])]
     grava("5-premissas-e-lacunas.csv", ["Tipo", "Item", "Valor / situação", "Fonte / como conferir"], prem)
     return pasta, [(li.get("opcao"), li["total_pix_pp"], li["total_cartao_pp"]) for li in linhas]
 

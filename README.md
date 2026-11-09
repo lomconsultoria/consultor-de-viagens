@@ -2,7 +2,7 @@
 
 Skill no padrão aberto **[Agent Skills](https://agentskills.io)** que transforma o assistente de IA num consultor de viagens econômicas: compara datas, fontes de preço e formas de pagamento, avalia ofertas e entrega uma recomendação clara, com uma planilha para simular, em Excel, Google Sheets ou CSV.
 
-> Criado por **LOM Consultoria e Projetos** · [contato@lomconsultoria.com](mailto:contato@lomconsultoria.com) · Versão 1.2
+> Criado por **LOM Consultoria e Projetos** · [contato@lomconsultoria.com](mailto:contato@lomconsultoria.com) · Versão 1.2.1
 
 ## O que a skill faz
 
@@ -36,6 +36,8 @@ consultor-de-viagens/
 ├── scripts/
 │   └── gerar_planilha.py         # gera o .xlsx (com fórmulas) e/ou os .csv a partir de um JSON
 └── evals/                        # 4 casos de teste no formato do padrão
+tests/
+└── teste_seguranca.py            # teste de segurança do script da planilha (fica fora do pacote da skill)
 ```
 
 ## Requisitos
@@ -61,9 +63,55 @@ consultor-de-viagens/
 
 Depois de instalar, peça algo como: *"Quero cotar passagens de São Paulo para Recife em março, 2 adultos"*.
 
+## Segurança
+
+### "Essa skill executa código na máquina": o que isso significa
+
+Esse aviso aparece em qualquer skill que traga um programa junto. Aqui, o programa é um só: `scripts/gerar_planilha.py`, que monta a planilha a partir dos dados da cotação.
+
+| O programa... | |
+|---|---|
+| Lê | só o arquivo de dados (JSON) que o próprio assistente monta com a cotação |
+| Grava | a planilha `.xlsx` e/ou os `.csv`, sem sobrescrever arquivos existentes |
+| Acessa a internet | **não** |
+| Executa outros programas ou comandos | **não** |
+| Apaga arquivos | **não** |
+| Usa bibliotecas | só a biblioteca padrão do Python e o `openpyxl` (gravação de Excel) |
+
+**Onde ele roda:** no app do Claude, num ambiente isolado na nuvem, sem acesso aos seus arquivos. No Claude Code, no Codex e em ferramentas parecidas, roda no seu computador, como qualquer programa. Nos dois casos, o código é curto e está aberto neste repositório para conferência.
+
+### Proteções
+
+- **Conteúdo de sites é dado, nunca instrução:** a skill ignora textos de páginas, anúncios ou documentos que tentem mudar a recomendação ou as regras, e relata a tentativa.
+- **Sem compra, login ou dados pessoais:** não faz login, não cria conta, não resolve CAPTCHA, não chega à tela de pagamento, não informa CPF, e-mail ou telefone e não baixa arquivos de sites.
+- **Planilha à prova de fórmula maliciosa:** texto vindo de sites que comece com `=`, `+`, `-`, `@`, tabulação ou quebra de linha é gravado como texto. Uma varredura final garante que só as fórmulas do próprio script fiquem como fórmula, no Excel, no Google Sheets e no CSV.
+- **Links seguros:** só `http(s)`. A célula mostra o domínio de destino (ex.: `kayak.com.br`), para você ver para onde vai antes de clicar. `javascript:`, `file:`, `data:` e caminhos de rede são descartados.
+- **Entrada validada:** caracteres de controle são removidos, textos gigantes são cortados, números inválidos viram "lacuna", formatos de número só da lista do script, número de passageiros entre 1 e 99, e caminho de saída sem `..`.
+
+### Teste de segurança
+
+`tests/teste_seguranca.py` simula dados de sites maliciosos: 12 tipos de injeção de fórmula (incluindo `HYPERLINK`, `IMPORTXML` e `WEBSERVICE`, usados para vazar dados), 7 tipos de link perigoso, números inválidos (NaN, infinito), caracteres de controle, texto de 40 mil caracteres, tipos errados e caminho de saída fora da pasta.
+
+```
+python tests/teste_seguranca.py
+```
+
+Resultado em 09/11/2026: a versão 1.2 tinha 7 tipos de falha, com 394 ocorrências somando os cenários: fórmula injetada no título, formato de número manipulável, CSV sem proteção para tabulação e quebra de linha, script quebrando com caracteres de controle e com texto no lugar de número, 0 passageiros aceito e caminho de saída com `..` aceito. A versão 1.2.1 passou sem nenhuma. A planilha atacada também foi aberta no LibreOffice e convertida no Google Sheets: nenhuma fórmula maliciosa foi executada.
+
+### Riscos que continuam
+
+- **Link para site legítimo, mas errado:** a skill só usa links dos vendedores consultados, mas não há como garantir que um site não tenha sido adulterado. Confira o domínio mostrado na planilha antes de clicar e de pagar.
+- **Injeção de instruções (prompt injection):** a regra de ignorar instruções vindas de sites reduz o risco, mas nenhum assistente de IA é imune. Confira a recomendação antes de comprar; a compra é sempre sua.
+- **Cópias alteradas:** instale só a partir deste repositório (`lmello83/consultor-de-viagens`). Uma cópia modificada pode trazer outro programa com o mesmo aviso.
+
+### Como reportar uma vulnerabilidade
+
+Escreva para [contato@lomconsultoria.com](mailto:contato@lomconsultoria.com), sem abrir issue pública. Detalhes em [SECURITY.md](SECURITY.md).
+
 ## Testes
 
-A pasta `evals/` tem 4 casos (pedido vago, cotação com hospedagem fixa, auditoria de oferta e viagem com várias cidades). Com o Claude Code, rode `claude plugin eval .` dentro da pasta da skill para comparar respostas com e sem a skill.
+- **Comportamento:** a pasta `evals/` tem 4 casos (pedido vago, cotação com hospedagem fixa, auditoria de oferta e viagem com várias cidades). Com o Claude Code, rode `claude plugin eval .` dentro da pasta da skill para comparar respostas com e sem a skill.
+- **Segurança:** `python tests/teste_seguranca.py` na raiz do repositório (ver acima).
 
 ## Licença
 
