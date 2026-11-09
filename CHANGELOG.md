@@ -4,7 +4,11 @@
 - **Três formatos de planilha:** Excel (padrão, com fórmulas), Google Sheets (envio ao Drive convertendo o .xlsx, fórmulas preservadas) e CSV (um arquivo por aba, valores calculados, `;` e vírgula decimal para o Excel em português).
 - A pergunta de abertura passa a perguntar o formato da planilha.
 - CSV protegido contra injeção de fórmula (apóstrofo antes de `=`, `+`, `-`, `@`) e com links só `http(s)`.
-- Critérios de avaliação nos 4 casos de teste de `evals/`.
+- **Várias cidades na planilha:** campo `trechos` soma os trechos de cada opção e mostra o preço de cada um; a resposta compara trechos separados com o bilhete multi-city numa linha própria, mesmo quando o preço do multi-city fica como lacuna.
+- **Sem hospedagem fixa:** a diária extra deixou de ser obrigatória; não é mais preciso gravar 0 para o script rodar.
+- **Veredito escrito pelo consultor** (`opcoes[].veredito`) para quando o preço sozinho não decide.
+- Veredito sem preço mostra o limite em reais ("só compensa se a passagem sair mais de R$ X por pessoa mais barata") em vez de erro; simulação de parcelas sem `#VALUE!`.
+- Critérios de avaliação nos 4 casos de teste de `evals/`, com rodada de testes comparando a 1.0 e a 1.2.
 
 ## 1.1 — novembro de 2026
 - **Portável entre ferramentas:** segue o padrão aberto Agent Skills e passa no validador oficial (`skills-ref`). Novo campo `compatibility` no cabeçalho com o que a skill precisa.

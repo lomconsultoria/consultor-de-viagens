@@ -83,7 +83,9 @@ Pergunte o formato na abertura; sem resposta, use Excel. Pode gerar mais de um (
 }
 ```
 
-- Obrigatórios: `titulo`, `consulta`, `recomendacao`, `premissas` (com `passageiros` e `diaria_extra_grupo`) e `opcoes`.
+- Obrigatórios: `titulo`, `consulta`, `recomendacao`, `premissas` (com `passageiros`) e `opcoes`.
+- `diaria_extra_grupo` só quando há hospedagem fixa e noites extras para comparar. Sem ela, o script cria a premissa vazia ("lacuna", com a observação "não se aplica") e as opções sem noites extras calculam normalmente. Não grave 0 para preencher.
+- **Várias cidades:** em vez de `ida_*` e `volta_pp`, use `opcoes[].trechos`, uma lista na ordem da viagem: `{"rota": "CWB→SCL", "data": "sáb 10/04", "horario": "08:00", "companhia": "LATAM", "pix_pp": 900, "cartao_pp": 950, "fonte": "Kayak"}`. O script soma todos os trechos nas colunas de ida (PIX e cartão), deixa a volta em 0 e põe o preço de cada trecho no comentário da célula. Trecho sem preço (`null`) deixa o total como "lacuna". Inclua a linha do bilhete multi-city, com `pix_pp: null` se não foi possível cotar.
 - `opcoes`: a recomendada primeiro (o script reordena se `recomendada: true`). Valores por pessoa como número; sem dado, `null` (vira "lacuna").
 - `simulacao.base`: `ida_pix`, `ida_cartao` ou `volta` (da opção recomendada).
 - `opcoes[].veredito` (opcional): texto que substitui o veredito automático. Use quando o preço sozinho não decide, por exemplo uma opção mais barata mas com horas a mais de viagem ou chegada de madrugada. Sem ele, a planilha calcula o veredito só pelo preço.

@@ -48,7 +48,7 @@ Leia o módulo indicado pela tabela de roteamento do SKILL.md. Quando o pedido f
    - **Terminal ou aeroporto:** troca na mesma cidade.
    - **Proteção:** com bilhetes separados, um atraso não é coberto; a segunda companhia não reacomoda.
 3. Margem segura de conexão por conta própria (heurística da skill, não regra oficial): 3 h doméstica sem bagagem; 4 a 5 h internacional com novo despacho e imigração; pernoite se o último voo do dia for o único.
-4. **Várias cidades:** compare a soma dos trechos separados com um bilhete multi-city na mesma companhia ou aliança.
+4. **Várias cidades:** compare a soma dos trechos separados com um bilhete multi-city na mesma companhia ou aliança. Mostre essa comparação numa linha própria da tabela, mesmo que o preço do multi-city fique como "lacuna"; nesse caso, diga por que não foi possível cotar e deixe o link pronto da busca multi-city.
 5. **Hidden city (descer na escala):** só explique se a pessoa mencionar. Riscos: viola o contrato da maioria das companhias; a bagagem despachada vai até o destino final; os trechos seguintes do bilhete são cancelados; risco de perder milhas ou a conta do programa; a companhia pode mudar a rota. Recomendação padrão: evitar.
 
 **Saída:** opções com preço, tempo total, número de bilhetes, novo despacho, visto, margem de conexão e nível de risco (baixo, médio, alto), mais o checklist de riscos da recomendada.

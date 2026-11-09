@@ -133,11 +133,51 @@ def validar(d):
     if faltando:
         sys.exit(f"Erro: JSON sem os campos obrigatórios: {', '.join(faltando)}")
     chaves = {p.get("chave") for p in d["premissas"]}
-    for k in ("passageiros", "diaria_extra_grupo"):
-        if k not in chaves:
-            sys.exit(f"Erro: premissa obrigatória ausente: {k}")
+    if "passageiros" not in chaves:
+        sys.exit("Erro: premissa obrigatória ausente: passageiros")
     if not d["opcoes"]:
         sys.exit("Erro: 'opcoes' está vazio.")
+    normalizar(d)
+
+
+def _soma(vals):
+    return round(sum(vals), 2) if vals and all(_num(v) for v in vals) else None
+
+
+def normalizar(d):
+    """Prepara o JSON para os cálculos, sem inventar valores.
+
+    - Sem hospedagem fixa, 'diaria_extra_grupo' pode faltar: vira premissa vazia ("lacuna"),
+      e opções com 0 noites extras calculam normalmente (hospedagem extra = 0).
+    - Viagens com várias cidades: 'trechos' (lista) substitui ida/volta. A soma de todos os
+      trechos vai para as colunas de passagens; a volta fica 0 porque já está somada.
+    """
+    if not any(p.get("chave") == "diaria_extra_grupo" for p in d["premissas"]):
+        d["premissas"].append({
+            "chave": "diaria_extra_grupo", "rotulo": "Diária extra do grupo (R$)", "valor": None,
+            "fonte": "Não se aplica: sem hospedagem fixa. Preencha só se for comparar noites extras."})
+    for o in d["opcoes"]:
+        tr = o.get("trechos")
+        if not tr:
+            continue
+        o["ida_pix_pp"] = _soma([t.get("pix_pp") for t in tr])
+        o["ida_cartao_pp"] = _soma([t.get("cartao_pp") for t in tr])
+        o["volta_pp"] = 0
+        o.setdefault("trecho", " → ".join(str(t.get("rota", "?")) for t in tr))
+        o.setdefault("ida_data", str(tr[0].get("data", "")))
+        o.setdefault("partida", str(tr[0].get("horario", "")))
+        o.setdefault("companhia", " / ".join(dict.fromkeys(str(t["companhia"]) for t in tr if t.get("companhia"))))
+        o.setdefault("volta", "Somada nos trechos (detalhe no comentário da coluna de ida)")
+        o.setdefault("noites_extras", 0)
+        det = []
+        for t in tr:
+            pix = t.get("pix_pp")
+            car = t.get("cartao_pp")
+            det.append(f"{t.get('rota', '?')} {t.get('data', '')} {t.get('horario', '')}, {t.get('companhia', '?')}: "
+                       f"PIX {('R$ %.2f' % pix) if _num(pix) else 'lacuna'}, "
+                       f"cartão {('R$ %.2f' % car) if _num(car) else 'lacuna'}"
+                       + (f" ({t['fonte']})" if t.get("fonte") else ""))
+        o.setdefault("fonte_ida", "Trechos por pessoa:\n" + "\n".join(det))
 
 
 def gerar(d, saida):
@@ -178,7 +218,7 @@ def gerar(d, saida):
     cd["A1"] = "Comparação de datas — valores POR PESSOA" + (" — " + d["observacao_bagagem"] if d.get("observacao_bagagem") else "")
     cd["A1"].font = fnt(True, size=12)
     cols = ["Opção", "Data da ida", "Partida", "Chegada", "Trecho", "Companhia", "Escalas", "Volta",
-            "Ida por pessoa (PIX)", "Ida por pessoa (cartão)", "Volta por pessoa", "Noites extras",
+            "Ida (ou todos os trechos) por pessoa (PIX)", "Ida (ou todos os trechos) por pessoa (cartão)", "Volta por pessoa", "Noites extras",
             "Hospedagem extra por pessoa", "TOTAL por pessoa (PIX)", "TOTAL por pessoa (cartão)",
             "Total do grupo (PIX)", "Total do grupo (cartão)", "Diferença vs. recomendada (PIX, por pessoa)",
             "Diária máx. por pessoa para empatar", "Veredito"]
@@ -199,7 +239,7 @@ def gerar(d, saida):
             cd.cell(row=r, column=9).comment = Comment(str(o["fonte_ida"]), "Cotação")
         if o.get("fonte_volta"):
             cd.cell(row=r, column=11).comment = Comment(str(o["fonte_volta"]), "Cotação")
-        formula(cd.cell(row=r, column=13), f"=L{r}*{diaria}/{pax}")
+        formula(cd.cell(row=r, column=13), f'=IF(L{r}=0,0,IFERROR(L{r}*{diaria}/{pax},"lacuna"))')
         formula(cd.cell(row=r, column=14), f'=IFERROR(I{r}+K{r}+M{r},"lacuna")', bold=True)
         formula(cd.cell(row=r, column=15), f'=IFERROR(J{r}+K{r}+M{r},"lacuna")', bold=True)
         formula(cd.cell(row=r, column=16), f'=IFERROR(N{r}*{pax},"lacuna")')
@@ -226,7 +266,8 @@ def gerar(d, saida):
         try:
             pax_v = next(p["valor"] for p in d["premissas"] if p["chave"] == "passageiros")
             diaria_v = next(p["valor"] for p in d["premissas"] if p["chave"] == "diaria_extra_grupo")
-            hosp = o.get("noites_extras", 0) * diaria_v / pax_v
+            n_ext = o.get("noites_extras", 0) or 0
+            hosp = n_ext * diaria_v / pax_v if n_ext else 0
             totais_py.append((o.get("opcao"), round(o["ida_pix_pp"] + o["volta_pp"] + hosp, 2),
                               round(o["ida_cartao_pp"] + o["volta_pp"] + hosp, 2)
                               if isinstance(o.get("ida_cartao_pp"), (int, float)) else "lacuna"))
@@ -235,7 +276,8 @@ def gerar(d, saida):
     fim = r0 + len(opcoes) - 1
     notas = [
         "Células azuis: valores coletados nas fontes (ver comentários). Células pretas: fórmulas.",
-        "Hospedagem extra = noites extras × diária extra do grupo ÷ passageiros (aba 'Premissas e lacunas').",
+        "Hospedagem extra = noites extras × diária extra do grupo ÷ passageiros (aba 'Premissas e lacunas'); sem noites extras, é 0.",
+        "Várias cidades: a coluna de ida soma todos os trechos e a volta fica 0; o detalhe por trecho está no comentário da célula.",
         "'Diária máx. por pessoa para empatar': quanto cada noite extra pode custar por pessoa para a opção empatar com a recomendada.",
         f"Preços mudam a cada minuto: retrato de {d['consulta']}.",
     ]
@@ -351,13 +393,14 @@ def _num(v):
 
 def calcular(d):
     """Mesmos cálculos das fórmulas do Excel, em Python."""
+    normalizar(d)
     prem = {p["chave"]: p.get("valor") for p in d["premissas"]}
-    pax, diaria = prem["passageiros"], prem["diaria_extra_grupo"]
+    pax, diaria = prem["passageiros"], prem.get("diaria_extra_grupo")
     opcoes = sorted(d["opcoes"], key=lambda o: not o.get("recomendada", False))
     linhas = []
     for o in opcoes:
         n = o.get("noites_extras", 0) or 0
-        hosp = n * diaria / pax if _num(diaria) and _num(pax) and pax else None
+        hosp = 0 if not n else (n * diaria / pax if _num(diaria) and _num(pax) and pax else None)
         ida_p, ida_c, volta = o.get("ida_pix_pp"), o.get("ida_cartao_pp"), o.get("volta_pp")
         t_pix = ida_p + volta + hosp if all(_num(x) for x in (ida_p, volta, hosp)) else None
         t_car = ida_c + volta + hosp if all(_num(x) for x in (ida_c, volta, hosp)) else None
@@ -431,7 +474,7 @@ def gerar_csv(d, pasta, sep=";", decimal=","):
 
     grava("2-comparacao-de-datas.csv",
           ["Opção", "Data da ida", "Partida", "Chegada", "Trecho", "Companhia", "Escalas", "Volta",
-           "Ida por pessoa (PIX)", "Ida por pessoa (cartão)", "Volta por pessoa", "Noites extras",
+           "Ida (ou todos os trechos) por pessoa (PIX)", "Ida (ou todos os trechos) por pessoa (cartão)", "Volta por pessoa", "Noites extras",
            "Hospedagem extra por pessoa", "TOTAL por pessoa (PIX)", "TOTAL por pessoa (cartão)",
            "Total do grupo (PIX)", "Total do grupo (cartão)", "Diferença vs. recomendada (PIX)",
            "Diária máx. por pessoa para empatar", "Veredito"],

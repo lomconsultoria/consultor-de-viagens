@@ -71,7 +71,7 @@ Se o pedido ainda não traz o necessário, a primeira resposta é **uma única p
 - Se o pedido já traz o que fazer, origem, destino, datas e número de pessoas, pule a pergunta e pesquise.
 - Se traz só parte, pergunte apenas o que falta e muda o resultado, numa mensagem só. Depois disso, o que faltar vira premissa declarada.
 - **Nunca assuma a origem**: pergunte.
-- **Várias cidades:** trate como sequência de trechos (A→B, B→C, C→A), aplique o comparativo de datas e as várias fontes a cada trecho, e compare com um bilhete multi-city (módulo 3).
+- **Várias cidades:** trate como sequência de trechos (A→B, B→C, C→A), aplique as várias fontes a cada trecho e compare com um bilhete multi-city (módulo 3). A tabela de decisão sempre tem uma linha "bilhete multi-city", com preço ou com "lacuna" e o motivo, porque às vezes um bilhete único sai mais barato e protege as conexões. O comparativo de 1 ou 2 dias antes só se aplica a trechos com hospedagem já fechada.
 
 ## Âncoras e calendário
 
