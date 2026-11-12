@@ -167,7 +167,7 @@ Resultado em 09/11/2026: a versão 1.2 tinha 7 tipos de falha, com 394 ocorrênc
 - **CSV salvo de novo no Excel:** o apóstrofo que protege o CSV pode sumir se alguém abrir, salvar e reabrir o arquivo no Excel (limite apontado pela própria OWASP). No Excel (.xlsx) e no Google Sheets isso não acontece, porque o texto já é gravado como texto.
 - **Link para site legítimo, mas errado:** a skill só usa links dos vendedores consultados, mas não há como garantir que um site não tenha sido adulterado. Confira o domínio mostrado na planilha antes de clicar e de pagar.
 - **Injeção de instruções (prompt injection):** a regra de ignorar instruções vindas de sites reduz o risco, mas nenhum assistente de IA é imune. Confira a recomendação antes de comprar; a compra é sempre sua.
-- **Cópias alteradas:** instale só a partir deste repositório (`lmello83/consultor-de-viagens`). Uma cópia modificada pode trazer outro programa com o mesmo aviso.
+- **Cópias alteradas:** instale só a partir deste repositório (`lomconsultoria/consultor-de-viagens`). Uma cópia modificada pode trazer outro programa com o mesmo aviso.
 
 ### Como reportar uma vulnerabilidade
 
