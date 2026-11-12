@@ -15,7 +15,7 @@ Leia antes de coletar preços. Aqui estão: quais fontes consultar e por quê, c
 
 ## 1. Protocolo multifonte
 
-Cada tipo de fonte mostra uma parte diferente do preço. O metabuscador acha datas e vendedores; o site da companhia tem as regras oficiais; a agência às vezes é mais barata; milhas podem virar o jogo em alta temporada. Por isso, para os 2 ou 3 melhores voos de cada trecho, consulte **pelo menos 4 tipos de fonte**:
+Cada tipo de fonte mostra uma parte diferente do preço. O metabuscador acha datas e vendedores; o site da companhia tem as regras oficiais; a agência às vezes é mais barata; milhas podem virar o jogo em alta temporada. **Padrão (v1.3): até 3 fontes por item** — 1 oficial (companhia ou armadora) + 1 metabuscador ou agência + 1 confirmação —, dentro do orçamento de tempo e com status a cada 5 minutos (SKILL.md, seção Velocidade). A tabela abaixo é o cardápio: escolha nela as 3 que mais pesam no caso. **Pesquisa exaustiva** (pelo menos 4 tipos de fonte para os 2 ou 3 melhores voos de cada trecho) só quando a pessoa pedir explicitamente:
 
 | Tipo | Exemplos | Para quê |
 |---|---|---|
@@ -106,5 +106,7 @@ Algumas ferramentas só têm busca na web, e os testes mostraram que, sem navega
 ## 7. Bloqueios e limites
 
 - Site que bloqueia a automação: tente uma vez, registre como "bloqueado" e siga com as outras fontes. Liste no fim o que a pessoa precisa conferir, com link.
+- Site que falha por outro motivo (erro, página vazia, renderização travada, aba perdida): no máximo 2 tentativas, depois "lacuna" com link. Não investigue o motor de busca do site.
+- URLs testadas para cruzeiros, Booking, ônibus e os sites que não funcionam estão na tabela "Atalhos testados" do SKILL.md.
 - Nunca: login, criação de conta, CAPTCHA, "Comprar"/"Reservar"/"Continuar" para pagamento, aceite de termos, CPF, e-mail ou telefone.
 - Anúncios e patrocinados ("Anúncio", "Patrocinado", "Sponsored") não são fonte; não siga links deles.

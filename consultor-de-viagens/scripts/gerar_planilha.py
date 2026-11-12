@@ -218,6 +218,7 @@ def normalizar(d):
       e opções com 0 noites extras calculam normalmente (hospedagem extra = 0).
     - Viagens com várias cidades: 'trechos' (lista) substitui ida/volta. A soma de todos os
       trechos vai para as colunas de passagens; a volta fica 0 porque já está somada.
+    - Trechos com o campo 'item' geram a aba 'Detalhamento por item' (uma coluna por item).
     """
     _limpar(d)
     for o in d["opcoes"]:
@@ -255,6 +256,36 @@ def normalizar(d):
                        f"cartão {('R$ %.2f' % car) if _num(car) else 'lacuna'}"
                        + (f" ({t['fonte']})" if t.get("fonte") else ""))
         o.setdefault("fonte_ida", "Trechos por pessoa:\n" + "\n".join(det))
+    # Diária de equilíbrio só faz sentido quando a diferença vem das noites extras. Se a opção tem
+    # itens diferentes da recomendada (ex.: hotel no destino, outro voo de volta), não se aplica.
+    rec = next((o for o in d["opcoes"] if o.get("recomendada")), d["opcoes"][0])
+    itens_rec = {str(t.get("item")) for t in rec.get("trechos") or [] if t.get("item")}
+    for o in d["opcoes"]:
+        itens = {str(t.get("item")) for t in o.get("trechos") or [] if t.get("item")}
+        o["_eq_na"] = o.get("equilibrio") is False or (bool(itens or itens_rec) and itens != itens_rec)
+
+
+def itens_detalhe(d):
+    """Itens (colunas) da aba 'Detalhamento por item', na ordem em que aparecem.
+
+    Usa o campo opcional 'item' de cada trecho (ex.: "Voo de ida", "Cruzeiro", "Hotel no destino").
+    Lista vazia = a aba não é criada."""
+    vistos = []
+    for o in sorted(d["opcoes"], key=lambda o: not o.get("recomendada", False)):
+        for t in o.get("trechos") or []:
+            it = t.get("item")
+            if it and str(it) not in vistos:
+                vistos.append(str(it))
+    return vistos
+
+
+def valores_detalhe(o, itens):
+    """Valor por pessoa (PIX) de cada item numa opção: número, None (lacuna) ou "—" (não tem)."""
+    out = []
+    for it in itens:
+        vals = [t.get("pix_pp") for t in o.get("trechos") or [] if str(t.get("item")) == it]
+        out.append("—" if not vals else _soma(vals))
+    return out
 
 
 def gerar(d, saida):
@@ -322,7 +353,10 @@ def gerar(d, saida):
         formula(cd.cell(row=r, column=16), f'=IFERROR(N{r}*{pax},"lacuna")')
         formula(cd.cell(row=r, column=17), f'=IFERROR(O{r}*{pax},"lacuna")')
         formula(cd.cell(row=r, column=18), f'=IFERROR(N{r}-$N${r0},"lacuna")')
-        formula(cd.cell(row=r, column=19), f'=IF(L{r}=0,"—",IFERROR(($N${r0}-I{r}-K{r})/L{r},"lacuna"))')
+        if o.get("_eq_na"):
+            texto(cd.cell(row=r, column=19), "não se aplica (a diferença não vem só das noites extras)")
+        else:
+            formula(cd.cell(row=r, column=19), f'=IF(L{r}=0,"—",IFERROR(($N${r0}-I{r}-K{r})/L{r},"lacuna"))')
         if o.get("recomendada"):
             texto(cd.cell(row=r, column=20), o.get("veredito", "Recomendada"), bold=True)
         elif o.get("veredito"):
@@ -363,6 +397,44 @@ def gerar(d, saida):
     larguras(cd, [26, 15, 8, 8, 24, 11, 22, 34, 13, 13, 12, 9, 13, 14, 14, 14, 14, 15, 14, 36])
     cd.freeze_panes = "B4"
     cd.auto_filter.ref = f"A3:T{fim}"
+
+    # ---------- Detalhamento por item ----------
+    itens = itens_detalhe(d)
+    if itens:
+        dt = wb.create_sheet("Detalhamento por item", 1)
+        dt["A1"] = "Detalhamento por item — valores POR PESSOA (PIX / à vista)"
+        dt["A1"].font = fnt(True, size=12)
+        ncol = len(itens)
+        cabecalho(dt, 3, ["Opção"] + [""] * ncol + ["Noites extras antes (hospedagem)", "TOTAL por pessoa", "Total do grupo"])
+        for j, it in enumerate(itens, 2):  # rótulos vêm do JSON: gravados como texto protegido
+            texto(dt.cell(row=3, column=j), it, bold=True, color="FFFFFF")
+            dt.cell(row=3, column=j).fill = HDR
+            dt.cell(row=3, column=j).alignment = Alignment(wrap_text=True, vertical="center", horizontal="center")
+        ch, ct, cg = ncol + 2, ncol + 3, ncol + 4
+        L = get_column_letter
+        for idx, o in enumerate(opcoes):
+            r, rc = 4 + idx, r0 + idx
+            texto(dt.cell(row=r, column=1), o.get("opcao", ""), bold=bool(o.get("recomendada")))
+            for j, v in enumerate(valores_detalhe(o, itens), 2):
+                if v == "—":
+                    texto(dt.cell(row=r, column=j), "—")
+                else:
+                    numero(dt.cell(row=r, column=j), v)
+            formula(dt.cell(row=r, column=ch), f"={C}!M{rc}")
+            faixa = f"B{r}:{L(ch)}{r}"
+            formula(dt.cell(row=r, column=ct), f'=IF(COUNTIF({faixa},"lacuna")>0,"lacuna",SUM({faixa}))', bold=True)
+            formula(dt.cell(row=r, column=cg), f'=IFERROR({L(ct)}{r}*{pax},"lacuna")', bold=True)
+            if o.get("recomendada"):
+                for j in range(1, cg + 1):
+                    dt.cell(row=r, column=j).fill = REC
+        rp = 4 + len(opcoes) + 1
+        texto(dt.cell(row=rp, column=1), "Peso de cada item na opção recomendada", bold=True)
+        for j in range(2, ch + 1):
+            formula(dt.cell(row=rp, column=j), f'=IFERROR({L(j)}4/${L(ct)}$4,"—")', fmt="0.0%")
+        dt.cell(row=rp + 2, column=1, value="Células azuis: preços coletados; pretas: fórmulas. '—' = a opção não tem esse item. "
+                "A hospedagem das noites extras vem da aba 'Comparação de datas'.").font = fnt(italic=True)
+        larguras(dt, [34] + [16] * (ncol + 3))
+        dt.freeze_panes = "B4"
 
     # ---------- Fontes ----------
     fo = wb.create_sheet("Fontes")
@@ -496,7 +568,9 @@ def calcular(d):
     for li in linhas:
         n = li.get("noites_extras", 0)
         li["diferenca"] = li["total_pix_pp"] - base if _num(li["total_pix_pp"]) and _num(base) else None
-        if n is None:
+        if li.get("_eq_na"):
+            li["equilibrio"] = "não se aplica"
+        elif n is None:
             li["equilibrio"] = None
         elif not n:
             li["equilibrio"] = "—"
@@ -554,7 +628,7 @@ def gerar_csv(d, pasta, sep=";", decimal=","):
     def grava(nome, cab, rows):
         with open(os.path.join(pasta, nome), "w", encoding="utf-8-sig", newline="") as fh:
             w = csv.writer(fh, delimiter=sep)
-            w.writerow(cab)
+            w.writerow([_cel_csv(v, decimal) for v in cab])  # cabeçalho pode trazer rótulos do JSON (itens)
             for r in rows:
                 w.writerow([_cel_csv(v, decimal) for v in r])
 
@@ -601,6 +675,15 @@ def gerar_csv(d, pasta, sep=";", decimal=","):
     prem = [["Premissa", p.get("rotulo", p["chave"]), p.get("valor"), p.get("fonte", "")] for p in d["premissas"]]
     prem += [["Lacuna", l.get("item"), l.get("situacao"), _texto_csv_link(l.get("como_conferir"))] for l in d.get("lacunas", [])]
     grava("5-premissas-e-lacunas.csv", ["Tipo", "Item", "Valor / situação", "Fonte / como conferir"], prem)
+    itens = itens_detalhe(d)
+    if itens:
+        rows = []
+        for li in linhas:
+            vals = valores_detalhe(li, itens)
+            soma = None if any(v is None for v in vals) or not _num(li.get("hosp_pp")) else \
+                round(sum(v for v in vals if _num(v)) + li["hosp_pp"], 2)
+            rows.append([li.get("opcao")] + vals + [li.get("hosp_pp"), soma, soma * pax if _num(soma) else None])
+        grava("6-detalhamento-por-item.csv", ["Opção"] + itens + ["Noites extras antes (hospedagem)", "TOTAL por pessoa", "Total do grupo"], rows)
     return pasta, [(li.get("opcao"), li["total_pix_pp"], li["total_cartao_pp"]) for li in linhas]
 
 
