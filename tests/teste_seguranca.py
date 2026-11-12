@@ -29,7 +29,7 @@ def base(i):
                  "companhia": q, "escalas": q, "volta": q, "ida_pix_pp": 100 + j, "ida_cartao_pp": q if j % 2 else 110,
                  "volta_pp": 50, "noites_extras": j % 3, "fonte_ida": q, "fonte_volta": q,
                  **({"veredito": q} if j == 3 else {})} for j, q in enumerate(P)]
-              + [{"opcao": "multi", "trechos": [{"rota": q, "data": q, "horario": q, "companhia": q, "pix_pp": 10, "cartao_pp": 11, "fonte": q} for q in P]}],
+              + [{"opcao": "multi", "trechos": [{"rota": q, "data": q, "horario": q, "companhia": q, "pix_pp": 10, "cartao_pp": 11, "fonte": q, "item": q} for q in P]}],
      "fontes": [{"trecho": q, "voo": q, "fonte": q, "pix_pp": q, "cartao_pp": 10, "parcelamento": q, "tarifa": q,
                  "reputacao": q, "link": LINKS[k % len(LINKS)], "hora": q} for k, q in enumerate(P)],
      "pagamento": [{"canal": q, "desconto_pix": q, "parcelas_sem_juros": q, "parcela_minima": q, "juros": q,

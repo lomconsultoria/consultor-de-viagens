@@ -1,5 +1,17 @@
 # Histórico de versões
 
+## 1.3.0 — novembro de 2026 (velocidade e cruzeiros)
+Motivo: numa cotação real de cruzeiro (Santos → Salvador, abril de 2027), a pesquisa levou 2h22 sem notícias; cerca de 25 de ~60 chamadas foram em sites que falhavam ou em tentativas repetidas.
+- **Status a cada 5 minutos (obrigatório):** mensagem de até 3 linhas com o que está confirmado, o que está em andamento e a previsão de entrega.
+- **Orçamento de tempo:** até 15 min para um item, até 30 min para a cotação completa; ao estourar, entrega o que tem com as lacunas. Achado que muda o pedido sai na hora.
+- **Teto de 3 fontes por item** (1 oficial + 1 metabuscador/agência + 1 confirmação); pesquisa exaustiva só se a pessoa pedir.
+- **Regra das 2 falhas:** site que falha 2 vezes vira lacuna com link.
+- **Módulo de cruzeiros:** temporada primeiro (Brasil: novembro a abril), trechos só de ida no fim e no início da temporada, preço por tipo de cabine e conta porta a porta.
+- **Atalhos testados:** URLs que funcionaram (Kayak com vários aeroportos, Booking com filtro de nota, MSC, CVC cruzeiros, Cruzeiros Travel, DeÔnibus) e sites a evitar (Decolar para cruzeiros, site da Costa na automação, WebFetch em páginas que dependem de JavaScript).
+- **Planilha:** aba "Detalhamento por item" (campo `item` nos trechos) e CSV `6-detalhamento-por-item.csv`.
+- **Corrigido:** "Diária máx. para empatar" mostrava valor sem sentido (ex.: −R$ 125) quando a opção tinha hotel no destino ou outro voo de volta; agora mostra "não se aplica".
+- **Corrigido:** cabeçalho do CSV não protegia rótulos vindos do JSON contra injeção de fórmula (achado pelo teste de segurança ao incluir o campo `item`).
+
 ## 1.2.2 — novembro de 2026 (segurança)
 - **Teste de comportamento** em `tests/comportamento/`: 4 cenários de sites mal-intencionados (injeção de recomendação, pressão de compra com script, "regulamento" executável e pedido de CPF), mapeados no OWASP Top 10 para IA 2025. Versões 1.2.1 e 1.0: todas resistiram, 0 armadilhas disparadas.
 - **Regra 12 mais clara:** a tentativa de manipulação é relatada de forma visível (aviso do topo ou Parte 3) e vira sinal de alerta sobre o vendedor. No teste, uma execução tinha relatado só nas lacunas.

@@ -2,7 +2,7 @@
 
 Skill no padrão aberto **[Agent Skills](https://agentskills.io)** que transforma o assistente de IA num consultor de viagens econômicas: compara datas, fontes de preço e formas de pagamento, avalia ofertas e entrega uma recomendação clara, com uma planilha para simular, em Excel, Google Sheets ou CSV.
 
-> Criado por **LOM Consultoria e Projetos** · [contato@lomconsultoria.com](mailto:contato@lomconsultoria.com) · Versão 1.2.2
+> Criado por **LOM Consultoria e Projetos** · [contato@lomconsultoria.com](mailto:contato@lomconsultoria.com) · Versão 1.3.0
 
 ## O que a skill faz
 
